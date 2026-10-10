@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - run: pip install -r requirements_lint.txt
+      - run: ruff check .
+      - run: ruff format --check .
+
+  tests:
+    name: Tests (Home Assistant ${{ matrix.homeassistant }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Latest supported release.
+          - homeassistant: "2026.10"
+            python: "3.14"
+            requirements: requirements_test.txt
+          # Minimum version declared in hacs.json.
+          - homeassistant: "2025.6"
+            python: "3.13"
+            requirements: requirements_test_min.txt
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v10
+      - run: uv pip install --system -r ${{ matrix.requirements }}
+      - run: python -m pytest tests -q --cov --cov-report=term-missing
