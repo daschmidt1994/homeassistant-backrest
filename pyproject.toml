@@ -1,0 +1,34 @@
+[project]
+name = "homeassistant-backrest"
+version = "0.1.0"
+description = "Home Assistant integration for Backrest (restic web UI)"
+license = "MIT"
+requires-python = ">=3.13.2"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["live: tests against a real Backrest server (set BACKREST_LIVE_URL)"]
+filterwarnings = ["ignore::DeprecationWarning:acme.*"]
+
+[tool.coverage.run]
+source = ["custom_components.backrest"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["A", "ASYNC", "B", "BLE", "C4", "D", "E", "F", "I", "LOG", "PERF", "PIE", "PL", "PT", "RET", "RUF", "S", "SIM", "T20", "UP", "W"]
+ignore = [
+    "D203", "D213", "E501", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004", "RET505",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "D", "PLR2004", "PLR0917", "S105", "S106", "S107", "PLC0415", "SLF001"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["custom_components.backrest"]
+combine-as-imports = true
