@@ -1,2 +1,4 @@
 # Home Assistant 2025.6.0, the minimum version declared in hacs.json.
 pytest-homeassistant-custom-component==0.13.251
+# aiodns 3.4.0 (pinned by Home Assistant 2025.6) is incompatible with pycares 5.
+pycares==4.11.0
