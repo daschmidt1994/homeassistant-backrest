@@ -1,0 +1,263 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit Backrest verbinden",
+        "description": "Gib die Adresse deiner Backrest-Instanz ein. Zugangsdaten werden nur benötigt, wenn die Authentifizierung in Backrest aktiviert ist.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "ssl": "HTTPS verwenden",
+          "verify_ssl": "SSL-Zertifikat prüfen",
+          "username": "Benutzername",
+          "password": "Passwort"
+        },
+        "data_description": {
+          "host": "Hostname oder IP-Adresse des Backrest-Servers.",
+          "port": "Port der Backrest-Weboberfläche (Standard 9898).",
+          "ssl": "Aktivieren, wenn Backrest über HTTPS erreichbar ist, z. B. hinter einem Reverse Proxy.",
+          "verify_ssl": "Nur bei selbstsignierten Zertifikaten deaktivieren.",
+          "username": "Backrest-Benutzer. Leer lassen, wenn die Authentifizierung in Backrest deaktiviert ist.",
+          "password": "Passwort des Backrest-Benutzers."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Backrest erneut anmelden",
+        "description": "Die Zugangsdaten für {name} sind nicht mehr gültig. Gib einen Backrest-Benutzernamen und ein Passwort ein.",
+        "data": {
+          "username": "Benutzername",
+          "password": "Passwort"
+        },
+        "data_description": {
+          "username": "Backrest-Benutzer. Leer lassen, wenn die Authentifizierung in Backrest deaktiviert ist.",
+          "password": "Passwort des Backrest-Benutzers."
+        }
+      },
+      "reconfigure": {
+        "title": "Backrest neu konfigurieren",
+        "description": "Ändere die Verbindungseinstellungen dieser Backrest-Instanz.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "ssl": "HTTPS verwenden",
+          "verify_ssl": "SSL-Zertifikat prüfen"
+        },
+        "data_description": {
+          "host": "Hostname oder IP-Adresse des Backrest-Servers.",
+          "port": "Port der Backrest-Weboberfläche (Standard 9898).",
+          "ssl": "Aktivieren, wenn Backrest über HTTPS erreichbar ist, z. B. hinter einem Reverse Proxy.",
+          "verify_ssl": "Nur bei selbstsignierten Zertifikaten deaktivieren."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zu Backrest fehlgeschlagen. Prüfe Host, Port und Protokoll.",
+      "invalid_auth": "Benutzername oder Passwort ist falsch.",
+      "auth_required": "Diese Backrest-Instanz erfordert Benutzername und Passwort.",
+      "ssl_error": "Das SSL-Zertifikat konnte nicht geprüft werden. Deaktiviere die Zertifikatsprüfung bei selbstsignierten Zertifikaten.",
+      "invalid_response": "Der Server antwortet nicht wie Backrest. Prüfe Host und Port.",
+      "unknown": "Unerwarteter Fehler."
+    },
+    "abort": {
+      "already_configured": "Diese Backrest-Instanz ist bereits eingerichtet.",
+      "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
+      "reconfigure_successful": "Die Neukonfiguration war erfolgreich.",
+      "wrong_instance": "Der Server ist eine andere Backrest-Instanz als die eingerichtete."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Backrest-Optionen",
+        "data": {
+          "scan_interval": "Aktualisierungsintervall",
+          "event_stream": "Echtzeit-Aktualisierung"
+        },
+        "data_description": {
+          "scan_interval": "Wie oft Backrest abgefragt wird, in Sekunden.",
+          "event_stream": "Den Ereignis-Stream von Backrest abonnieren, um sofort zu aktualisieren, wenn ein Backup startet oder endet. Die regelmäßige Abfrage läuft trotzdem weiter."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "plans": {
+        "name": "Backup-Pläne"
+      },
+      "successful_plans": {
+        "name": "Pläne mit erfolgreichem letztem Backup"
+      },
+      "failed_plans": {
+        "name": "Pläne mit fehlgeschlagenem letztem Backup"
+      },
+      "running_backups": {
+        "name": "Laufende Backups"
+      },
+      "plans_without_success": {
+        "name": "Pläne ohne erfolgreiches Backup"
+      },
+      "last_success_overall": {
+        "name": "Letztes erfolgreiches Backup"
+      },
+      "repositories": {
+        "name": "Repositories"
+      },
+      "last_backup_status": {
+        "name": "Status des letzten Backups",
+        "state": {
+          "success": "Erfolgreich",
+          "warning": "Warnung",
+          "error": "Fehler",
+          "in_progress": "Läuft",
+          "system_cancelled": "Vom System abgebrochen",
+          "user_cancelled": "Vom Benutzer abgebrochen"
+        }
+      },
+      "last_success": {
+        "name": "Letztes erfolgreiches Backup"
+      },
+      "last_attempt": {
+        "name": "Letzter Backup-Versuch"
+      },
+      "next_backup": {
+        "name": "Nächstes Backup"
+      },
+      "last_duration": {
+        "name": "Dauer des letzten Backups"
+      },
+      "successful_backups_30d": {
+        "name": "Erfolgreiche Backups (30 Tage)"
+      },
+      "failed_backups_30d": {
+        "name": "Fehlgeschlagene Backups (30 Tage)"
+      },
+      "backup_progress": {
+        "name": "Backup-Fortschritt"
+      },
+      "last_status_change": {
+        "name": "Letzte Statusänderung"
+      },
+      "last_error": {
+        "name": "Letzte Fehlermeldung"
+      },
+      "last_backup_size": {
+        "name": "Größe des letzten Backups"
+      },
+      "last_backup_data_added": {
+        "name": "Neue Daten im letzten Backup"
+      },
+      "last_backup_files": {
+        "name": "Dateien im letzten Backup"
+      },
+      "repo_plans": {
+        "name": "Backup-Pläne"
+      },
+      "data_added_30d": {
+        "name": "Neue Daten (30 Tage)"
+      },
+      "protected_data": {
+        "name": "Geschützte Daten"
+      }
+    },
+    "binary_sensor": {
+      "reachable": {
+        "name": "Erreichbar"
+      },
+      "backup_running": {
+        "name": "Backup läuft"
+      },
+      "problem": {
+        "name": "Problem"
+      },
+      "last_backup_failed": {
+        "name": "Letztes Backup fehlgeschlagen"
+      },
+      "overdue": {
+        "name": "Backup überfällig"
+      }
+    },
+    "button": {
+      "start_backup": {
+        "name": "Backup starten"
+      },
+      "cancel_backup": {
+        "name": "Backup abbrechen"
+      },
+      "check_repository": {
+        "name": "Repository prüfen"
+      },
+      "prune_repository": {
+        "name": "Repository bereinigen (Prune)"
+      }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Die Anmeldung bei Backrest ist fehlgeschlagen."
+    },
+    "update_failed": {
+      "message": "Fehler bei der Kommunikation mit Backrest: {error}"
+    },
+    "cannot_connect": {
+      "message": "Keine Verbindung zu Backrest: {error}"
+    },
+    "plan_not_found": {
+      "message": "Der Backup-Plan {target} existiert in Backrest nicht."
+    },
+    "target_not_found": {
+      "message": "{target} existiert in Backrest nicht."
+    },
+    "repo_not_found": {
+      "message": "Das Repository {target} existiert in Backrest nicht."
+    },
+    "backup_already_running": {
+      "message": "Ein Backup des Plans {target} läuft bereits oder ist in der Warteschlange."
+    },
+    "no_backup_running": {
+      "message": "Für den Plan {target} läuft kein Backup."
+    },
+    "repo_task_already_running": {
+      "message": "Für das Repository {target} läuft bereits eine Aufgabe."
+    },
+    "action_failed": {
+      "message": "Backrest meldet einen Fehler für {target}: {error}"
+    },
+    "entry_not_found": {
+      "message": "Kein Backrest-Konfigurationseintrag mit der ID {entry_id} gefunden."
+    },
+    "entry_not_loaded": {
+      "message": "Die Backrest-Instanz {entry} ist nicht geladen."
+    }
+  },
+  "services": {
+    "start_backup": {
+      "name": "Backup starten",
+      "description": "Startet ein Backup eines Backrest-Plans. Die Aktion kehrt zurück, sobald Backrest das Backup angenommen hat; das Ergebnis zeigen die Sensoren des Plans.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Backrest-Instanz",
+          "description": "Die Backrest-Instanz, zu der der Plan gehört."
+        },
+        "plan_id": {
+          "name": "Plan-ID",
+          "description": "ID des Backup-Plans, wie in Backrest angezeigt."
+        }
+      }
+    },
+    "cancel_backup": {
+      "name": "Backup abbrechen",
+      "description": "Fordert den Abbruch des laufenden Backups eines Backrest-Plans an.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Backrest-Instanz",
+          "description": "Die Backrest-Instanz, zu der der Plan gehört."
+        },
+        "plan_id": {
+          "name": "Plan-ID",
+          "description": "ID des Backup-Plans, dessen laufendes Backup abgebrochen werden soll."
+        }
+      }
+    }
+  }
+}
