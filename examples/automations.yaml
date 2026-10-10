@@ -1,0 +1,86 @@
+# Example automations for the Backrest integration.
+#
+# They assume a Backrest instance named "homeserver" with a backup plan "nas".
+# Entity IDs follow the pattern:
+#   <domain>.backrest_<instance>_<name>   for the server device
+#   <domain>.backrest_<plan_id>_<name>    for backup plans
+# Replace "notify.notify" with your notification action, e.g.
+# notify.mobile_app_<device>.
+
+- id: backrest_backup_failed
+  alias: "Backrest: backup failed"
+  description: Notify when the latest backup of the NAS plan failed.
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.backrest_nas_last_backup_failed
+      from: "off"
+      to: "on"
+  actions:
+    - action: notify.notify
+      data:
+        title: "Backup failed"
+        message: >-
+          Backup plan "nas" failed:
+          {{ trigger.to_state.attributes.error_message or 'no error message' }}
+
+- id: backrest_backup_overdue
+  alias: "Backrest: backup overdue"
+  description: >-
+    Warn when the NAS plan missed its schedule (no successful backup for
+    1.25 x the schedule interval, same rule as the Backrest dashboard).
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.backrest_nas_backup_overdue
+      from: "off"
+      to: "on"
+  actions:
+    - action: notify.notify
+      data:
+        title: "Backup overdue"
+        message: >-
+          No successful backup of "nas" since
+          {{ as_timestamp(trigger.to_state.attributes.last_success, none)
+             | timestamp_custom('%Y-%m-%d %H:%M', default='never') }}.
+
+- id: backrest_backup_older_than_48h
+  alias: "Backrest: no backup for 48 hours"
+  description: Custom threshold, independent of the Backrest schedule.
+  triggers:
+    - trigger: template
+      value_template: >-
+        {% set last = states('sensor.backrest_nas_last_successful_backup') | as_datetime(none) %}
+        {{ last is not none and now() - last > timedelta(hours=48) }}
+  actions:
+    - action: notify.notify
+      data:
+        title: "Backup older than 48 hours"
+        message: The last successful backup of "nas" is older than 48 hours.
+
+- id: backrest_start_backup_nightly
+  alias: "Backrest: start NAS backup at night"
+  description: Start a backup unless one is already running.
+  triggers:
+    - trigger: time
+      at: "22:00:00"
+  conditions:
+    - condition: state
+      entity_id: binary_sensor.backrest_nas_backup_running
+      state: "off"
+  actions:
+    - action: button.press
+      target:
+        entity_id: button.backrest_nas_start_backup
+
+- id: backrest_offline
+  alias: "Backrest: server offline"
+  description: Notify when Backrest has been unreachable for 5 minutes.
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.backrest_homeserver_reachable
+      to: "off"
+      for: "00:05:00"
+  actions:
+    - action: notify.notify
+      data:
+        title: "Backrest offline"
+        message: The Backrest server "homeserver" is not reachable.

@@ -1,0 +1,2 @@
+# Home Assistant 2025.6.0, the minimum version declared in hacs.json.
+pytest-homeassistant-custom-component==0.13.251
