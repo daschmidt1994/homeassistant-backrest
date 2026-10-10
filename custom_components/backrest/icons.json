@@ -1,0 +1,56 @@
+{
+  "entity": {
+    "sensor": {
+      "plans": { "default": "mdi:calendar-sync" },
+      "successful_plans": { "default": "mdi:check-circle-outline" },
+      "failed_plans": { "default": "mdi:alert-circle-outline" },
+      "running_backups": { "default": "mdi:progress-upload" },
+      "plans_without_success": { "default": "mdi:help-circle-outline" },
+      "last_success_overall": { "default": "mdi:backup-restore" },
+      "repositories": { "default": "mdi:database" },
+      "last_backup_status": {
+        "default": "mdi:backup-restore",
+        "state": {
+          "success": "mdi:check-circle",
+          "warning": "mdi:alert",
+          "error": "mdi:alert-circle",
+          "in_progress": "mdi:progress-upload",
+          "system_cancelled": "mdi:cancel",
+          "user_cancelled": "mdi:cancel"
+        }
+      },
+      "last_success": { "default": "mdi:calendar-check" },
+      "last_attempt": { "default": "mdi:calendar-clock" },
+      "next_backup": { "default": "mdi:calendar-arrow-right" },
+      "last_duration": { "default": "mdi:timer-outline" },
+      "successful_backups_30d": { "default": "mdi:check-all" },
+      "failed_backups_30d": { "default": "mdi:close-circle-multiple-outline" },
+      "backup_progress": { "default": "mdi:progress-clock" },
+      "last_status_change": { "default": "mdi:swap-horizontal" },
+      "last_error": { "default": "mdi:message-alert-outline" },
+      "last_backup_size": { "default": "mdi:harddisk" },
+      "last_backup_data_added": { "default": "mdi:database-plus" },
+      "last_backup_files": { "default": "mdi:file-multiple" },
+      "repo_plans": { "default": "mdi:calendar-sync" },
+      "data_added_30d": { "default": "mdi:database-plus" },
+      "protected_data": { "default": "mdi:shield-check" }
+    },
+    "binary_sensor": {
+      "reachable": { "default": "mdi:server-network" },
+      "backup_running": { "default": "mdi:progress-upload" },
+      "problem": { "default": "mdi:shield-alert" },
+      "last_backup_failed": { "default": "mdi:alert-circle" },
+      "overdue": { "default": "mdi:clock-alert-outline" }
+    },
+    "button": {
+      "start_backup": { "default": "mdi:play-circle" },
+      "cancel_backup": { "default": "mdi:stop-circle" },
+      "check_repository": { "default": "mdi:database-check" },
+      "prune_repository": { "default": "mdi:database-minus" }
+    }
+  },
+  "services": {
+    "start_backup": { "service": "mdi:play-circle" },
+    "cancel_backup": { "service": "mdi:stop-circle" }
+  }
+}

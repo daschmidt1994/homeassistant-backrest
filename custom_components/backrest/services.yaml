@@ -1,0 +1,25 @@
+start_backup:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: backrest
+    plan_id:
+      required: true
+      example: nas-daily
+      selector:
+        text:
+
+cancel_backup:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: backrest
+    plan_id:
+      required: true
+      example: nas-daily
+      selector:
+        text:
