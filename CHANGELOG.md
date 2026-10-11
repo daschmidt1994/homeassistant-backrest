@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-10-11
 
 - Shorter German entity names so they are no longer cut off on phones
 - "Backup running", "Last backup failed" and "Backup overdue" show Yes/No instead of
