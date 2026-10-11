@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Shorter German entity names so they are no longer cut off on phones
+- "Backup running", "Last backup failed" and "Backup overdue" show Yes/No instead of
+  "Not running"/"OK", with icons that change with the state
+- Backup progress shows 0 % when no backup is running instead of unknown
+- Last backup duration is shown in minutes for new installations
+- Last backup attempt and per-plan running backups count moved to diagnostics
+
 ## 0.1.0 - 2026-10-10
 
 First release.

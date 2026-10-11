@@ -37,10 +37,19 @@
     },
     "binary_sensor": {
       "reachable": { "default": "mdi:server-network" },
-      "backup_running": { "default": "mdi:progress-upload" },
+      "backup_running": {
+        "default": "mdi:progress-upload",
+        "state": { "off": "mdi:progress-check" }
+      },
       "problem": { "default": "mdi:shield-alert" },
-      "last_backup_failed": { "default": "mdi:alert-circle" },
-      "overdue": { "default": "mdi:clock-alert-outline" }
+      "last_backup_failed": {
+        "default": "mdi:check-circle-outline",
+        "state": { "on": "mdi:alert-circle" }
+      },
+      "overdue": {
+        "default": "mdi:clock-check-outline",
+        "state": { "on": "mdi:clock-alert-outline" }
+      }
     },
     "button": {
       "start_backup": { "default": "mdi:play-circle" },

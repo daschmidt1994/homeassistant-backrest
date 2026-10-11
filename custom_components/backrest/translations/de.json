@@ -86,25 +86,25 @@
         "name": "Backup-Pläne"
       },
       "successful_plans": {
-        "name": "Pläne mit erfolgreichem letztem Backup"
+        "name": "Pläne erfolgreich"
       },
       "failed_plans": {
-        "name": "Pläne mit fehlgeschlagenem letztem Backup"
+        "name": "Pläne fehlgeschlagen"
       },
       "running_backups": {
         "name": "Laufende Backups"
       },
       "plans_without_success": {
-        "name": "Pläne ohne erfolgreiches Backup"
+        "name": "Pläne nie erfolgreich"
       },
       "last_success_overall": {
-        "name": "Letztes erfolgreiches Backup"
+        "name": "Zuletzt gesichert"
       },
       "repositories": {
         "name": "Repositories"
       },
       "last_backup_status": {
-        "name": "Status des letzten Backups",
+        "name": "Letztes Backup",
         "state": {
           "success": "Erfolgreich",
           "warning": "Warnung",
@@ -115,40 +115,40 @@
         }
       },
       "last_success": {
-        "name": "Letztes erfolgreiches Backup"
+        "name": "Zuletzt gesichert"
       },
       "last_attempt": {
-        "name": "Letzter Backup-Versuch"
+        "name": "Letzter Versuch"
       },
       "next_backup": {
         "name": "Nächstes Backup"
       },
       "last_duration": {
-        "name": "Dauer des letzten Backups"
+        "name": "Backup-Dauer"
       },
       "successful_backups_30d": {
-        "name": "Erfolgreiche Backups (30 Tage)"
+        "name": "Erfolgreich (30 Tage)"
       },
       "failed_backups_30d": {
-        "name": "Fehlgeschlagene Backups (30 Tage)"
+        "name": "Fehlgeschlagen (30 Tage)"
       },
       "backup_progress": {
-        "name": "Backup-Fortschritt"
+        "name": "Fortschritt"
       },
       "last_status_change": {
         "name": "Letzte Statusänderung"
       },
       "last_error": {
-        "name": "Letzte Fehlermeldung"
+        "name": "Letzter Fehler"
       },
       "last_backup_size": {
-        "name": "Größe des letzten Backups"
+        "name": "Backup-Größe"
       },
       "last_backup_data_added": {
-        "name": "Neue Daten im letzten Backup"
+        "name": "Neue Daten"
       },
       "last_backup_files": {
-        "name": "Dateien im letzten Backup"
+        "name": "Dateien"
       },
       "repo_plans": {
         "name": "Backup-Pläne"
@@ -165,16 +165,28 @@
         "name": "Erreichbar"
       },
       "backup_running": {
-        "name": "Backup läuft"
+        "name": "Backup läuft",
+        "state": {
+          "on": "Ja",
+          "off": "Nein"
+        }
       },
       "problem": {
         "name": "Problem"
       },
       "last_backup_failed": {
-        "name": "Letztes Backup fehlgeschlagen"
+        "name": "Letztes Backup fehlgeschlagen",
+        "state": {
+          "on": "Ja",
+          "off": "Nein"
+        }
       },
       "overdue": {
-        "name": "Backup überfällig"
+        "name": "Überfällig",
+        "state": {
+          "on": "Ja",
+          "off": "Nein"
+        }
       }
     },
     "button": {

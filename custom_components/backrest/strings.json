@@ -165,16 +165,28 @@
         "name": "Reachable"
       },
       "backup_running": {
-        "name": "Backup running"
+        "name": "Backup running",
+        "state": {
+          "on": "Yes",
+          "off": "No"
+        }
       },
       "problem": {
         "name": "Problem"
       },
       "last_backup_failed": {
-        "name": "Last backup failed"
+        "name": "Last backup failed",
+        "state": {
+          "on": "Yes",
+          "off": "No"
+        }
       },
       "overdue": {
-        "name": "Backup overdue"
+        "name": "Backup overdue",
+        "state": {
+          "on": "Yes",
+          "off": "No"
+        }
       }
     },
     "button": {

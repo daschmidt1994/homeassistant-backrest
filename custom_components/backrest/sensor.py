@@ -187,6 +187,7 @@ PLAN_SENSORS: tuple[BackrestPlanSensorDescription, ...] = (
         key="last_attempt",
         translation_key="last_attempt",
         device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda state: state.last_attempt,
     ),
     BackrestPlanSensorDescription(
@@ -200,8 +201,9 @@ PLAN_SENSORS: tuple[BackrestPlanSensorDescription, ...] = (
         translation_key="last_duration",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
+        suggested_display_precision=1,
         value_fn=_duration,
     ),
     BackrestPlanSensorDescription(
@@ -227,6 +229,7 @@ PLAN_SENSORS: tuple[BackrestPlanSensorDescription, ...] = (
         key="running_backups",
         translation_key="running_backups",
         state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda state: len(state.running),
         attributes_fn=lambda state: {"queued": state.queued},
     ),
@@ -236,7 +239,7 @@ PLAN_SENSORS: tuple[BackrestPlanSensorDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda state: state.progress,
+        value_fn=lambda state: state.progress if state.is_running else 0,
     ),
     BackrestPlanSensorDescription(
         key="last_status_change",

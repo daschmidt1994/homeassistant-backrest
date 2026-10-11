@@ -123,11 +123,11 @@ appends `_2`.
 | Backup overdue | `binary_sensor.backrest_nas_backup_overdue` | Attribute `last_success` |
 | Last backup status | `sensor.backrest_nas_last_backup_status` | `success`, `warning`, `error`, `in_progress`, `system_cancelled`, `user_cancelled` |
 | Last successful backup | `sensor.backrest_nas_last_successful_backup` | Timestamp, attribute `snapshot_id` |
-| Last backup attempt | `sensor.backrest_nas_last_backup_attempt` | Start time of the latest run |
+| Last backup attempt | `sensor.backrest_nas_last_backup_attempt` | Start time of the latest run; diagnostic |
 | Next backup | `sensor.backrest_nas_next_backup` | Next scheduled run, unknown if the schedule is disabled |
-| Last backup duration | `sensor.backrest_nas_last_backup_duration` | Seconds |
-| Backup progress | `sensor.backrest_nas_backup_progress` | Percent while running |
-| Running backups | `sensor.backrest_nas_running_backups` | Attribute `queued` |
+| Last backup duration | `sensor.backrest_nas_last_backup_duration` | Shown in minutes |
+| Backup progress | `sensor.backrest_nas_backup_progress` | Percent while running, `0` when idle |
+| Running backups | `sensor.backrest_nas_running_backups` | Diagnostic, attribute `queued` |
 | Successful backups (30 days) | `sensor.backrest_nas_successful_backups_30_days` | Includes warnings (attribute `with_warnings`); Backrest ≥ 1.6 |
 | Failed backups (30 days) | `sensor.backrest_nas_failed_backups_30_days` | Backrest ≥ 1.6 |
 | Last backup size | `sensor.backrest_nas_last_backup_size` | Bytes processed by the last successful backup |

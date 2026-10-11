@@ -53,11 +53,11 @@ async def test_setup_creates_entities(
     )
 
     assert hass.states.get("sensor.backrest_nas_last_backup_status").state == "success"
-    assert hass.states.get("sensor.backrest_nas_last_backup_duration").state == "150.0"
+    assert hass.states.get("sensor.backrest_nas_last_backup_duration").state == "2.5"
     assert hass.states.get("sensor.backrest_nas_successful_backups_30_days").state == "2"
     assert hass.states.get("sensor.backrest_nas_failed_backups_30_days").state == "0"
     assert hass.states.get("sensor.backrest_nas_next_backup").state != STATE_UNKNOWN
-    assert hass.states.get("sensor.backrest_nas_backup_progress").state == STATE_UNKNOWN
+    assert hass.states.get("sensor.backrest_nas_backup_progress").state == "0"
     assert hass.states.get("binary_sensor.backrest_nas_backup_running").state == STATE_OFF
     assert hass.states.get("binary_sensor.backrest_nas_last_backup_failed").state == STATE_OFF
     assert hass.states.get("binary_sensor.backrest_nas_backup_overdue").state == STATE_OFF
