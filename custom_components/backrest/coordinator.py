@@ -35,13 +35,15 @@ from .const import (
     MAX_PARALLEL_REQUESTS,
     OPERATIONS_PER_PLAN,
     START_CONFIRM_TIMEOUT,
+    SYSTEM_OPERATIONS,
 )
 from .models import (
+    SYSTEM_PLAN_ID,
     BackrestConfig,
     BackrestData,
-    RepoState,
     SummaryDashboard,
     build_plan_state,
+    build_repo_states,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -107,17 +109,26 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
         summary = await self._async_fetch_summary()
         semaphore = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
 
-        async def fetch_operations(plan_id: str) -> list[dict[str, Any]]:
+        async def fetch_operations(plan_id: str, last_n: int) -> list[dict[str, Any]]:
             async with semaphore:
-                return await self.client.async_get_operations(
-                    plan_id, config.instance, OPERATIONS_PER_PLAN
-                )
+                return await self.client.async_get_operations(plan_id, config.instance, last_n)
 
         plan_ids = list(config.plans)
-        results = await asyncio.gather(
-            *(fetch_operations(plan_id) for plan_id in plan_ids),
+        *results, system_result = await asyncio.gather(
+            *(fetch_operations(plan_id, OPERATIONS_PER_PLAN) for plan_id in plan_ids),
+            fetch_operations(SYSTEM_PLAN_ID, SYSTEM_OPERATIONS),
             return_exceptions=True,
         )
+        all_operations: list[dict[str, Any]] = []
+        if isinstance(system_result, BackrestAuthError):
+            raise system_result
+        if isinstance(system_result, BaseException):
+            # Repository maintenance only enriches the data.
+            _LOGGER.debug("Cannot fetch repository maintenance operations: %s", system_result)
+        else:
+            all_operations.extend(
+                op for op in system_result if op.get("instanceId") in (None, "", config.instance)
+            )
         now = dt_util.utcnow()
         plans = {}
         for plan_id, result in zip(plan_ids, results, strict=True):
@@ -129,6 +140,7 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
             operations = [
                 op for op in result if op.get("instanceId") in (None, "", config.instance)
             ]
+            all_operations.extend(operations)
             plans[plan_id] = build_plan_state(
                 config.plans[plan_id],
                 operations,
@@ -137,18 +149,10 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
                 now,
             )
 
-        repos = {
-            repo_id: RepoState(
-                repo=repo,
-                plan_ids=tuple(sorted(p.id for p in config.plans.values() if p.repo_id == repo_id)),
-                summary=summary.repos.get(repo_id) if summary else None,
-            )
-            for repo_id, repo in config.repos.items()
-        }
         return BackrestData(
             config=config,
             plans=plans,
-            repos=repos,
+            repos=build_repo_states(config, summary, all_operations),
             summary_available=summary is not None,
             fetched_at=now,
         )

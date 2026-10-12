@@ -24,6 +24,8 @@ add or delete later and lets you start or cancel backups from Home Assistant.
 - One device per Backrest server, per backup plan and per repository with stable unique IDs
 - Sensors for status, last success, last attempt, next scheduled run, duration, size,
   data added, progress, 30-day success/failure counts, last error and more
+- Live activity: what Backrest is doing right now (backup, check, prune, restore, ...)
+  per server and per repository, plus when the last check and prune ran
 - Binary sensors for reachability, running backups, failed backups, overdue plans
   and an overall "problem" flag
 - Buttons and actions to start or cancel a backup, optional repository check/prune buttons
@@ -102,8 +104,9 @@ appends `_2`.
 | Entity | Example entity ID | Notes |
 | --- | --- | --- |
 | Reachable | `binary_sensor.backrest_homeserver_reachable` | `off` when the last request failed; never unavailable |
-| Problem | `binary_sensor.backrest_homeserver_problem` | `on` if unreachable, a plan's last backup failed or a plan is overdue; attributes list the plans |
+| Problem | `binary_sensor.backrest_homeserver_problem` | `on` if unreachable, a plan's last backup failed, a plan is overdue or a repository's last check failed; attributes `failed_plans`, `overdue_plans`, `failed_checks` |
 | Backup running | `binary_sensor.backrest_homeserver_backup_running` | Any plan |
+| Activity | `sensor.backrest_homeserver_activity` | What Backrest is doing right now: `idle`, `backup`, `check`, `prune`, `forget`, `restore`, `stats`, `index`, `hook`, `command`; attribute `operations` lists all running tasks |
 | Backup plans | `sensor.backrest_homeserver_backup_plans` | Attribute `plans` |
 | Repositories | `sensor.backrest_homeserver_repositories` | |
 | Running backups | `sensor.backrest_homeserver_running_backups` | |
@@ -141,6 +144,9 @@ appends `_2`.
 | Entity | Example entity ID | Notes |
 | --- | --- | --- |
 | Backup plans | `sensor.backrest_repository_offsite_backup_plans` | |
+| Current task | `sensor.backrest_repository_offsite_current_task` | Task running on the repository, same values as Activity |
+| Last check | `sensor.backrest_repository_offsite_last_check` | When the last check finished; attributes `status`, `error_message` |
+| Last prune | `sensor.backrest_repository_offsite_last_prune` | When the last prune finished; attributes `status`, `error_message` |
 | Successful backups (30 days) | `sensor.backrest_repository_offsite_successful_backups_30_days` | Backrest ≥ 1.6 |
 | Failed backups (30 days) | `sensor.backrest_repository_offsite_failed_backups_30_days` | Backrest ≥ 1.6 |
 | Data added (30 days) | `sensor.backrest_repository_offsite_data_added_30_days` | Backrest ≥ 1.6 |

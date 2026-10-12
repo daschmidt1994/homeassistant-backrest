@@ -57,7 +57,7 @@ class FakeBackrest:
         self.password = PASSWORD
         self.plans: dict[str, dict[str, Any]] = {}
         self.repos: dict[str, dict[str, Any]] = {}
-        self.operations: dict[str, list[dict[str, Any]]] = {}
+        self.operations: dict[str, list[dict[str, Any]]] = {"_system_": []}
         self.summary_supported = True
         self.error: Exception | None = None
         self.backup_error: Exception | None = None
@@ -165,6 +165,35 @@ class FakeBackrest:
             }
         )
         return op_id
+
+    def add_system_operation(
+        self,
+        kind: str,
+        repo_id: str,
+        status: str,
+        start: datetime,
+        end: datetime | None = None,
+        message: str = "",
+    ) -> int:
+        """Add a repository maintenance operation such as operationCheck."""
+        self._next_id += 1
+        operation: dict[str, Any] = {
+            "id": str(self._next_id),
+            "flowId": str(self._next_id),
+            "repoId": repo_id,
+            "repoGuid": f"guid-{repo_id}",
+            "planId": "_system_",
+            "instanceId": self.instance,
+            "status": status,
+            "unixTimeStartMs": _ms(start),
+            kind: {},
+        }
+        if end is not None:
+            operation["unixTimeEndMs"] = _ms(end)
+        if message:
+            operation["displayMessage"] = message
+        self.operations["_system_"].append(operation)
+        return self._next_id
 
     def set_status(self, op_id: int, status: str, end: datetime | None = None) -> None:
         """Change the status of an operation."""
@@ -300,7 +329,7 @@ class FakeClient:
         self, plan_id: str, instance_id: str | None, last_n: int
     ) -> list[dict[str, Any]]:
         server = self._check()
-        if plan_id not in server.plans:
+        if plan_id not in server.plans and plan_id != "_system_":
             raise BackrestNotFoundError("not_found", "plan not found")
         operations = server.operations.get(plan_id, [])
         return [dict(op) for op in operations[-last_n:]]

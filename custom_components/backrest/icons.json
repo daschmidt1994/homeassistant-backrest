@@ -33,7 +33,39 @@
       "last_backup_files": { "default": "mdi:file-multiple" },
       "repo_plans": { "default": "mdi:calendar-sync" },
       "data_added_30d": { "default": "mdi:database-plus" },
-      "protected_data": { "default": "mdi:shield-check" }
+      "protected_data": { "default": "mdi:shield-check" },
+      "activity": {
+        "default": "mdi:cog-sync",
+        "state": {
+          "idle": "mdi:sleep",
+          "backup": "mdi:progress-upload",
+          "check": "mdi:database-search",
+          "prune": "mdi:database-minus",
+          "forget": "mdi:delete-clock",
+          "restore": "mdi:backup-restore",
+          "stats": "mdi:chart-box-outline",
+          "index": "mdi:database-refresh",
+          "hook": "mdi:hook",
+          "command": "mdi:console"
+        }
+      },
+      "current_task": {
+        "default": "mdi:cog-sync",
+        "state": {
+          "idle": "mdi:sleep",
+          "backup": "mdi:progress-upload",
+          "check": "mdi:database-search",
+          "prune": "mdi:database-minus",
+          "forget": "mdi:delete-clock",
+          "restore": "mdi:backup-restore",
+          "stats": "mdi:chart-box-outline",
+          "index": "mdi:database-refresh",
+          "hook": "mdi:hook",
+          "command": "mdi:console"
+        }
+      },
+      "last_check": { "default": "mdi:database-check" },
+      "last_prune": { "default": "mdi:database-minus" }
     },
     "binary_sensor": {
       "reachable": { "default": "mdi:server-network" },

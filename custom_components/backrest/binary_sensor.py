@@ -151,7 +151,7 @@ class BackrestReachableBinarySensor(BackrestServerEntity, BinarySensorEntity):
 
 
 class BackrestProblemBinarySensor(BackrestServerEntity, BinarySensorEntity):
-    """On when Backrest is unreachable, a backup failed or a plan is overdue."""
+    """On when Backrest is unreachable, a backup or check failed or a plan is overdue."""
 
     @property
     def available(self) -> bool:
@@ -163,18 +163,25 @@ class BackrestProblemBinarySensor(BackrestServerEntity, BinarySensorEntity):
         """Return whether there is a problem."""
         if not self.coordinator.last_update_success or self.coordinator.data is None:
             return True
-        return bool(self.coordinator.data.problem_plans)
+        data = self.coordinator.data
+        return bool(data.problem_plans or data.failed_check_repos)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the reasons."""
         data = self.coordinator.data
         if not self.coordinator.last_update_success or data is None:
-            return {"unreachable": True, "failed_plans": [], "overdue_plans": []}
+            return {
+                "unreachable": True,
+                "failed_plans": [],
+                "overdue_plans": [],
+                "failed_checks": [],
+            }
         return {
             "unreachable": False,
             "failed_plans": sorted(p for p, s in data.plans.items() if s.last_failed),
             "overdue_plans": sorted(p for p, s in data.plans.items() if s.overdue),
+            "failed_checks": data.failed_check_repos,
         }
 
 

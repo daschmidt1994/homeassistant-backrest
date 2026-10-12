@@ -158,6 +158,42 @@
       },
       "protected_data": {
         "name": "Geschützte Daten"
+      },
+      "activity": {
+        "name": "Aktivität",
+        "state": {
+          "idle": "Keine",
+          "backup": "Backup",
+          "check": "Prüfung",
+          "prune": "Bereinigung",
+          "forget": "Alte Snapshots löschen",
+          "restore": "Wiederherstellung",
+          "stats": "Statistik",
+          "index": "Snapshots einlesen",
+          "hook": "Hook",
+          "command": "Befehl"
+        }
+      },
+      "current_task": {
+        "name": "Aktuelle Aufgabe",
+        "state": {
+          "idle": "Keine",
+          "backup": "Backup",
+          "check": "Prüfung",
+          "prune": "Bereinigung",
+          "forget": "Alte Snapshots löschen",
+          "restore": "Wiederherstellung",
+          "stats": "Statistik",
+          "index": "Snapshots einlesen",
+          "hook": "Hook",
+          "command": "Befehl"
+        }
+      },
+      "last_check": {
+        "name": "Letzte Prüfung"
+      },
+      "last_prune": {
+        "name": "Letzte Bereinigung"
       }
     },
     "binary_sensor": {

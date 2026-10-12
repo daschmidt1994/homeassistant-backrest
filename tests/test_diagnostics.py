@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -37,7 +38,10 @@ async def test_diagnostics(
     ):
         assert secret not in dumped
 
-    assert result["integration_version"] == "0.1.0"
+    manifest = json.loads(
+        (Path(__file__).parent.parent / "custom_components/backrest/manifest.json").read_text()
+    )
+    assert result["integration_version"] == manifest["version"]
     assert result["entry"]["credentials_configured"] is True
     assert result["connection"]["reachable"] is False
     assert "**REDACTED**" in result["connection"]["last_error"]

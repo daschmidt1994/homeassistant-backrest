@@ -27,7 +27,9 @@ from .entity import (
 from .models import (
     GOOD_STATUSES,
     LAST_STATUS_OPTIONS,
+    TASK_OPTIONS,
     BackrestData,
+    Operation,
     OperationStatus,
     PlanState,
     RepoState,
@@ -60,6 +62,7 @@ class BackrestRepoSensorDescription(SensorEntityDescription):
     """Describes a sensor of a repository."""
 
     value_fn: Callable[[RepoState], StateValue]
+    attributes_fn: Callable[[RepoState], dict[str, Any] | None] = lambda _: None
     requires_summary: bool = False
 
 
@@ -77,7 +80,29 @@ def _last_success_plan(data: BackrestData) -> dict[str, Any] | None:
     return {"plan": plans[0]} if plans else None
 
 
+def _operations(operations: list[Operation]) -> dict[str, Any]:
+    return {"operations": [op.as_dict() for op in operations]}
+
+
+def _result(operation: Operation | None) -> dict[str, Any] | None:
+    if operation is None:
+        return None
+    failed = operation.status is OperationStatus.ERROR
+    return {
+        "status": operation.status.value,
+        "error_message": (operation.message or None) if failed else None,
+    }
+
+
 SERVER_SENSORS: tuple[BackrestServerSensorDescription, ...] = (
+    BackrestServerSensorDescription(
+        key="activity",
+        translation_key="activity",
+        device_class=SensorDeviceClass.ENUM,
+        options=TASK_OPTIONS,
+        value_fn=lambda data: data.current_task,
+        attributes_fn=lambda data: _operations(data.running_operations),
+    ),
     BackrestServerSensorDescription(
         key="plans",
         translation_key="plans",
@@ -286,6 +311,28 @@ PLAN_SENSORS: tuple[BackrestPlanSensorDescription, ...] = (
 
 REPO_SENSORS: tuple[BackrestRepoSensorDescription, ...] = (
     BackrestRepoSensorDescription(
+        key="current_task",
+        translation_key="current_task",
+        device_class=SensorDeviceClass.ENUM,
+        options=TASK_OPTIONS,
+        value_fn=lambda state: state.current_task,
+        attributes_fn=lambda state: _operations(list(state.running)),
+    ),
+    BackrestRepoSensorDescription(
+        key="last_check",
+        translation_key="last_check",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda state: state.last_check.completed_at if state.last_check else None,
+        attributes_fn=lambda state: _result(state.last_check),
+    ),
+    BackrestRepoSensorDescription(
+        key="last_prune",
+        translation_key="last_prune",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda state: state.last_prune.completed_at if state.last_prune else None,
+        attributes_fn=lambda state: _result(state.last_prune),
+    ),
+    BackrestRepoSensorDescription(
         key="plans",
         translation_key="repo_plans",
         state_class=SensorStateClass.MEASUREMENT,
@@ -407,3 +454,10 @@ class BackrestRepoSensor(BackrestRepoEntity, SensorEntity):
         if (state := self.repo_state) is None:
             return None
         return self.entity_description.value_fn(state)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return additional attributes."""
+        if (state := self.repo_state) is None:
+            return None
+        return self.entity_description.attributes_fn(state)

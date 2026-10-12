@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 - 2026-10-12
+
+- New Activity sensor on the server device shows what Backrest is doing right now
+  (backup, check, prune, forget old snapshots, restore, statistics, ...)
+- New Current task, Last check and Last prune sensors per repository, including
+  checks and prunes scheduled by Backrest itself
+- The Problem binary sensor also turns on when a repository's last check failed
+  (attribute `failed_checks`)
+- Fix the diagnostics test that failed after the 0.1.1 version bump
+
 ## 0.1.1 - 2026-10-11
 
 - Shorter German entity names so they are no longer cut off on phones

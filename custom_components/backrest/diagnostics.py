@@ -92,7 +92,14 @@ async def async_get_config_entry_diagnostics(
                 plan_id: _plan_diagnostics(state) for plan_id, state in sorted(data.plans.items())
             },
             "repositories": {
-                repo_id: {"plans": list(state.plan_ids), "has_summary": state.summary is not None}
+                repo_id: {
+                    "plans": list(state.plan_ids),
+                    "has_summary": state.summary is not None,
+                    "current_task": state.current_task,
+                    "last_check": _iso(state.last_check.completed_at) if state.last_check else None,
+                    "last_check_status": state.last_check.status if state.last_check else None,
+                    "last_prune": _iso(state.last_prune.completed_at) if state.last_prune else None,
+                }
                 for repo_id, state in sorted(data.repos.items())
             },
         }

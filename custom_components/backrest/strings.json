@@ -158,6 +158,42 @@
       },
       "protected_data": {
         "name": "Protected data"
+      },
+      "activity": {
+        "name": "Activity",
+        "state": {
+          "idle": "Idle",
+          "backup": "Backup",
+          "check": "Check",
+          "prune": "Prune",
+          "forget": "Forget old snapshots",
+          "restore": "Restore",
+          "stats": "Statistics",
+          "index": "Index snapshots",
+          "hook": "Hook",
+          "command": "Command"
+        }
+      },
+      "current_task": {
+        "name": "Current task",
+        "state": {
+          "idle": "Idle",
+          "backup": "Backup",
+          "check": "Check",
+          "prune": "Prune",
+          "forget": "Forget old snapshots",
+          "restore": "Restore",
+          "stats": "Statistics",
+          "index": "Index snapshots",
+          "hook": "Hook",
+          "command": "Command"
+        }
+      },
+      "last_check": {
+        "name": "Last check"
+      },
+      "last_prune": {
+        "name": "Last prune"
       }
     },
     "binary_sensor": {

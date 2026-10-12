@@ -410,6 +410,102 @@ class BackupOperation:
         return self.end or self.start
 
 
+class OperationKind(StrEnum):
+    """Type of a Backrest operation."""
+
+    BACKUP = "backup"
+    CHECK = "check"
+    PRUNE = "prune"
+    FORGET = "forget"
+    RESTORE = "restore"
+    STATS = "stats"
+    INDEX = "index"
+    HOOK = "hook"
+    COMMAND = "command"
+
+
+_OPERATION_KINDS = {
+    "operationBackup": OperationKind.BACKUP,
+    "operationCheck": OperationKind.CHECK,
+    "operationPrune": OperationKind.PRUNE,
+    "operationForget": OperationKind.FORGET,
+    "operationRestore": OperationKind.RESTORE,
+    "operationStats": OperationKind.STATS,
+    "operationIndexSnapshot": OperationKind.INDEX,
+    "operationRunHook": OperationKind.HOOK,
+    "operationRunCommand": OperationKind.COMMAND,
+}
+IDLE = "idle"
+# Values of the "current task" and "activity" sensors.
+TASK_OPTIONS = [IDLE, *(kind.value for kind in OperationKind)]
+# Backrest attributes repository maintenance (check, prune, stats, ...) to
+# this pseudo plan instead of a real one.
+SYSTEM_PLAN_ID = "_system_"
+
+
+@dataclass(frozen=True, slots=True)
+class Operation:
+    """Any Backrest operation, reduced to what the activity sensors need."""
+
+    id: int
+    kind: OperationKind
+    status: OperationStatus
+    plan_id: str
+    repo_id: str
+    start: datetime | None
+    end: datetime | None
+    message: str
+
+    @classmethod
+    def from_api(cls, data: dict[str, Any]) -> Operation | None:
+        """Parse an Operation message. Returns None for unknown types."""
+        op_id = _int(data.get("id"))
+        kind = next((k for key, k in _OPERATION_KINDS.items() if key in data), None)
+        if op_id is None or kind is None:
+            return None
+        return cls(
+            id=op_id,
+            kind=kind,
+            status=parse_status(data.get("status")),
+            plan_id=_str(data.get("planId")),
+            repo_id=_str(data.get("repoId")),
+            start=_ms_to_datetime(data.get("unixTimeStartMs")),
+            end=_ms_to_datetime(data.get("unixTimeEndMs")),
+            message=_truncate(_str(data.get("displayMessage"))),
+        )
+
+    @property
+    def is_running(self) -> bool:
+        """Return whether the operation is in progress."""
+        return self.status is OperationStatus.IN_PROGRESS
+
+    @property
+    def completed_at(self) -> datetime | None:
+        """Return when the operation finished (or started, if unknown)."""
+        return self.end or self.start
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return the operation as state attribute."""
+        return {
+            "task": self.kind.value,
+            "repository": self.repo_id or None,
+            "plan": None if self.plan_id.startswith("_") else self.plan_id or None,
+            "started": self.start.isoformat() if self.start else None,
+        }
+
+
+def current_task(running: list[Operation]) -> str:
+    """Return the task shown for a set of running operations.
+
+    Hooks only run briefly around other tasks, so a running backup or check
+    wins over them. Among the rest, the most recently started one is shown.
+    """
+    if not running:
+        return IDLE
+    main = [op for op in running if op.kind is not OperationKind.HOOK] or running
+    return max(main, key=lambda op: op.id).kind.value
+
+
 @dataclass(frozen=True, slots=True)
 class PlanState:
     """Derived state of a backup plan."""
@@ -595,6 +691,19 @@ class RepoState:
     repo: Repo
     plan_ids: tuple[str, ...]
     summary: Summary | None
+    running: tuple[Operation, ...] = ()
+    last_check: Operation | None = None
+    last_prune: Operation | None = None
+
+    @property
+    def current_task(self) -> str:
+        """Return the task currently running on the repository."""
+        return current_task(list(self.running))
+
+    @property
+    def last_check_failed(self) -> bool:
+        """Return whether the most recent repository check failed."""
+        return self.last_check is not None and self.last_check.status is OperationStatus.ERROR
 
 
 @dataclass(slots=True)
@@ -607,6 +716,23 @@ class BackrestData:
     summary_available: bool
     fetched_at: datetime
     plan_errors: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def running_operations(self) -> list[Operation]:
+        """Return all running operations, oldest first."""
+        return sorted(
+            (op for state in self.repos.values() for op in state.running), key=lambda op: op.id
+        )
+
+    @property
+    def current_task(self) -> str:
+        """Return the task currently running on the instance."""
+        return current_task(self.running_operations)
+
+    @property
+    def failed_check_repos(self) -> list[str]:
+        """Return repositories whose last check failed."""
+        return sorted(repo_id for repo_id, state in self.repos.items() if state.last_check_failed)
 
     @property
     def running_count(self) -> int:
@@ -639,3 +765,40 @@ class BackrestData:
         return sorted(
             plan_id for plan_id, state in self.plans.items() if state.last_failed or state.overdue
         )
+
+
+def build_repo_states(
+    config: BackrestConfig,
+    summary: SummaryDashboard | None,
+    raw_operations: list[dict[str, Any]],
+) -> dict[str, RepoState]:
+    """Derive repository states from the operations of all plans and the system."""
+    operations: dict[int, Operation] = {}
+    for raw in raw_operations:
+        if (op := Operation.from_api(raw)) is not None:
+            operations[op.id] = op
+    by_repo: dict[str, list[Operation]] = {}
+    for op in sorted(operations.values(), key=lambda op: op.id):
+        repo_id = op.repo_id
+        if not repo_id and (plan := config.plans.get(op.plan_id)):
+            repo_id = plan.repo_id
+        by_repo.setdefault(repo_id, []).append(op)
+
+    def last_finished(ops: list[Operation], kind: OperationKind) -> Operation | None:
+        return next(
+            (op for op in reversed(ops) if op.kind is kind and op.status in FINISHED_STATUSES),
+            None,
+        )
+
+    states: dict[str, RepoState] = {}
+    for repo_id, repo in config.repos.items():
+        ops = by_repo.get(repo_id, [])
+        states[repo_id] = RepoState(
+            repo=repo,
+            plan_ids=tuple(sorted(p.id for p in config.plans.values() if p.repo_id == repo_id)),
+            summary=summary.repos.get(repo_id) if summary else None,
+            running=tuple(op for op in ops if op.is_running),
+            last_check=last_finished(ops, OperationKind.CHECK),
+            last_prune=last_finished(ops, OperationKind.PRUNE),
+        )
+    return states

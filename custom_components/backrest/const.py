@@ -19,6 +19,9 @@ DEFAULT_EVENT_STREAM: Final = True
 # flows also contain forget/index/hook operations, so this covers roughly the
 # last 10-20 backup runs of a plan.
 OPERATIONS_PER_PLAN: Final = 50
+# Number of most recent repository maintenance operations (check, prune,
+# stats, ...) fetched on every refresh, across all repositories.
+SYSTEM_OPERATIONS: Final = 100
 # Upper bound of concurrent GetOperations requests during a refresh.
 MAX_PARALLEL_REQUESTS: Final = 4
 
