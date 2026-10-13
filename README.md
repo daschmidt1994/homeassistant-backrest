@@ -94,8 +94,10 @@ automatically; a changed address via **Reconfigure**.
 ## Entities
 
 Entity IDs below are what Home Assistant generates for a Backrest instance named
-`homeserver`, a plan with the ID `nas` and a repository `offsite`. They are derived from
-the English entity names, also when Home Assistant runs in German. If two devices would
+`homeserver`, a plan with the ID `nas` and a repository `offsite`, with Home Assistant
+set to English. Home Assistant derives entity IDs from the entity names in its configured
+language, so in German they read e.g. `sensor.backrest_nas_letztes_backup`. Entity IDs are
+created once; renaming entities in a later version does not change existing IDs. If two devices would
 produce the same entity ID (for example a plan named like the instance), Home Assistant
 appends `_2`.
 

@@ -48,10 +48,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: BackrestConfigEntry) -> 
     entry.runtime_data = coordinator
 
     # Register the server device first so plan and repository devices can
-    # reference it through via_device.
-    dr.async_get(hass).async_get_or_create(
+    # link to it.
+    server_device = dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id, **server_device_info(entry, coordinator)
     )
+    coordinator.server_device_id = server_device.id
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(

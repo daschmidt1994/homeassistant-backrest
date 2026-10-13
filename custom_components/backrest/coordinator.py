@@ -80,6 +80,7 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
         self.last_successful_fetch: datetime | None = None
         self.last_error: str | None = None
         self.event_stream_state: str = "disabled"
+        self.server_device_id: str | None = None
         self._tasks: dict[str, asyncio.Task[None]] = {}
 
     async def _async_update_data(self) -> BackrestData:

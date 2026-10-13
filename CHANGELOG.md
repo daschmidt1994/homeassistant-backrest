@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 - 2026-10-13
+
+- Fix plan and repository entities disappearing after renaming one of their entities on
+  Home Assistant 2026.10: devices are now linked to the server device by its registry ID
+  instead of the deprecated `via_device` identifier
+- README: entity IDs follow Home Assistant's configured language
+
 ## 0.2.0 - 2026-10-12
 
 - New Activity sensor on the server device shows what Backrest is doing right now

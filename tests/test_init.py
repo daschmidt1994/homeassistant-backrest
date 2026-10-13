@@ -94,6 +94,25 @@ async def test_device_hierarchy_and_unique_ids(
     assert entry.device_id == plan.id
 
 
+async def test_renamed_entities_stay_available(
+    hass: HomeAssistant, setup_integration: MockConfigEntry
+) -> None:
+    """Renaming an entity re-registers its device; plan and repo entities survive it."""
+    entity_registry = er.async_get(hass)
+    for old, new in (
+        ("sensor.backrest_nas_last_backup_status", "sensor.backrest_nas_status"),
+        (
+            "sensor.backrest_repository_local_repo_backup_plans",
+            "sensor.backrest_repository_local_repo_plans",
+        ),
+    ):
+        entity_registry.async_update_entity(old, new_entity_id=new)
+        await hass.async_block_till_done()
+        assert hass.states.get(old) is None
+        assert hass.states.get(new) is not None
+        assert hass.states.get(new).state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+
+
 async def test_new_plan_is_discovered_without_restart(
     hass: HomeAssistant, setup_integration: MockConfigEntry, backrest: FakeBackrest
 ) -> None:

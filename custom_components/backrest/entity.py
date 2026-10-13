@@ -16,6 +16,11 @@ from .models import PlanState, RepoState
 
 MANUFACTURER = "Backrest"
 
+# Newer Home Assistant versions link devices by device registry ID and reject
+# the deprecated identifier based `via_device` when a device is registered
+# again at runtime, for example after an entity was renamed.
+_SUPPORTS_VIA_DEVICE_ID = "via_device_id" in DeviceInfo.__annotations__
+
 
 def _instance_uid(entry: BackrestConfigEntry) -> str:
     return entry.unique_id or entry.entry_id
@@ -29,6 +34,15 @@ def plan_device_identifier(entry: BackrestConfigEntry, plan_id: str) -> tuple[st
 def repo_device_identifier(entry: BackrestConfigEntry, repo_id: str) -> tuple[str, str]:
     """Return the device identifier of a repository."""
     return (DOMAIN, f"{_instance_uid(entry)}_repo_{repo_id}")
+
+
+def _via_server(coordinator: BackrestCoordinator) -> DeviceInfo:
+    """Return the device info fields linking a device to the server device."""
+    if not _SUPPORTS_VIA_DEVICE_ID:
+        return DeviceInfo(via_device=(DOMAIN, _instance_uid(coordinator.config_entry)))
+    if coordinator.server_device_id is None:
+        return DeviceInfo()
+    return DeviceInfo(via_device_id=coordinator.server_device_id)
 
 
 def server_device_info(entry: BackrestConfigEntry, coordinator: BackrestCoordinator) -> DeviceInfo:
@@ -84,8 +98,8 @@ class BackrestPlanEntity(BackrestEntity):
             name=f"Backrest {plan_id}",
             manufacturer=MANUFACTURER,
             model="Backup plan",
-            via_device=(DOMAIN, _instance_uid(entry)),
             configuration_url=str(coordinator.client.base_url),
+            **_via_server(coordinator),
         )
 
     @property
@@ -120,8 +134,8 @@ class BackrestRepoEntity(BackrestEntity):
             name=f"Backrest repository {repo_id}",
             manufacturer=MANUFACTURER,
             model="Restic repository",
-            via_device=(DOMAIN, _instance_uid(entry)),
             configuration_url=str(coordinator.client.base_url),
+            **_via_server(coordinator),
         )
 
     @property
