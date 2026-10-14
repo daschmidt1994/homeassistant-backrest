@@ -1,0 +1,62 @@
+[
+ {
+  "peerInstanceId": "netbird-vps",
+  "peerKeyid": "ed25519.gwgMRaWBt9JPuZSs25mc-bAPiX5rnBVt3uBTs5M3iYM",
+  "state": "CONNECTION_STATE_CONNECTED",
+  "statusMessage": "connected",
+  "knownPlans": [
+   {
+    "id": "netbird-system"
+   }
+  ],
+  "knownRepos": [
+   {
+    "id": "netbird-vps",
+    "guid": "22fc74a1304be4ff548c1bcebf8e8a7b02a89ba07ff2b46516027b38c49209d0"
+   }
+  ],
+  "remoteConfig": {
+   "modno": 3,
+   "version": 6,
+   "repos": [
+    {
+     "id": "netbird-vps",
+     "uri": "rest:http://vps-netbird:fixture-rest-password@100.112.98.254:8100/vps-netbird/",
+     "guid": "22fc74a1304be4ff548c1bcebf8e8a7b02a89ba07ff2b46516027b38c49209d0",
+     "password": "fixture-repo-password",
+     "prunePolicy": {
+      "schedule": {
+       "disabled": true
+      }
+     },
+     "checkPolicy": {
+      "schedule": {
+       "disabled": true
+      }
+     },
+     "commandPrefix": {
+      "ioNice": "IO_BEST_EFFORT_LOW",
+      "cpuNice": "CPU_LOW"
+     }
+    }
+   ],
+   "plans": [
+    {
+     "id": "netbird-system",
+     "repo": "netbird-vps",
+     "paths": [
+      "/opt"
+     ],
+     "schedule": {
+      "cron": "0 3 * * *",
+      "clock": "CLOCK_LOCAL"
+     },
+     "retention": {
+      "policyKeepAll": true
+     }
+    }
+   ]
+  },
+  "lastHeartbeatMillis": "1791972442627"
+ }
+]

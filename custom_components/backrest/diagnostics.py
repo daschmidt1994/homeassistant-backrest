@@ -74,6 +74,7 @@ async def async_get_config_entry_diagnostics(
             "get_config": data is not None,
             "get_operations": data is not None,
             "summary_dashboard": coordinator.summary_supported,
+            "multihost": coordinator.multihost_supported,
             "event_stream": coordinator.event_stream_state,
             "operations_per_plan": OPERATIONS_PER_PLAN,
         },
@@ -101,6 +102,15 @@ async def async_get_config_entry_diagnostics(
                     "last_prune": _iso(state.last_prune.completed_at) if state.last_prune else None,
                 }
                 for repo_id, state in sorted(data.repos.items())
+            },
+            # Key IDs and remote configs are not exposed.
+            "remote_instances": {
+                instance_id: {
+                    "connection": remote.connection.value,
+                    "last_heartbeat": _iso(remote.last_heartbeat),
+                    "plans": [plan.id for plan in remote.plans],
+                }
+                for instance_id, remote in sorted(data.remotes.items())
             },
         }
     return async_redact_data(diagnostics, TO_REDACT)

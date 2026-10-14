@@ -194,6 +194,22 @@
       },
       "last_prune": {
         "name": "Letzte Bereinigung"
+      },
+      "last_contact": {
+        "name": "Letzter Kontakt"
+      },
+      "connection": {
+        "name": "Verbindung",
+        "state": {
+          "unknown": "Unbekannt",
+          "pending": "Ausstehend",
+          "connected": "Verbunden",
+          "disconnected": "Getrennt",
+          "retry_wait": "Wartet auf neuen Versuch",
+          "error_auth": "Anmeldefehler",
+          "error_protocol": "Protokollfehler",
+          "error_internal": "Interner Fehler"
+        }
       }
     },
     "binary_sensor": {
@@ -223,6 +239,9 @@
           "on": "Ja",
           "off": "Nein"
         }
+      },
+      "remote_connected": {
+        "name": "Verbunden"
       }
     },
     "button": {
@@ -276,6 +295,9 @@
     },
     "entry_not_loaded": {
       "message": "Die Backrest-Instanz {entry} ist nicht geladen."
+    },
+    "remote_plan_action": {
+      "message": "{target} gehört zu einer entfernten Backrest-Instanz. Deren Backups lassen sich nur dort starten oder abbrechen."
     }
   },
   "services": {

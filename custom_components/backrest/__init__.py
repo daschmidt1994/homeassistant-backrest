@@ -19,7 +19,12 @@ from homeassistant.helpers.typing import ConfigType
 from .api import BackrestClient, build_base_url
 from .const import CONF_EVENT_STREAM, DEFAULT_EVENT_STREAM, DOMAIN
 from .coordinator import BackrestConfigEntry, BackrestCoordinator
-from .entity import plan_device_identifier, repo_device_identifier, server_device_info
+from .entity import (
+    plan_device_identifier,
+    remote_device_identifier,
+    repo_device_identifier,
+    server_device_info,
+)
 from .events import BackrestEventListener
 from .services import async_setup_services
 
@@ -85,6 +90,7 @@ def _expected_identifiers(entry: BackrestConfigEntry) -> set[tuple[str, str]]:
     identifiers = {(DOMAIN, entry.unique_id or entry.entry_id)}
     identifiers.update(plan_device_identifier(entry, plan_id) for plan_id in data.plans)
     identifiers.update(repo_device_identifier(entry, repo_id) for repo_id in data.repos)
+    identifiers.update(remote_device_identifier(entry, instance) for instance in data.remotes)
     return identifiers
 
 

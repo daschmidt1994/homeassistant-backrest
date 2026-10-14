@@ -253,3 +253,28 @@ async def test_operation_events_truncated(
     with pytest.raises(BackrestResponseError):
         async for _ in _client(hass, None, None).async_operation_events():
             pass
+
+
+async def test_peer_states_stream(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    """Peer states are collected; the server ends the stream by cancelling it."""
+    body = _frame(
+        {"peerInstanceId": "netbird-vps", "state": "CONNECTION_STATE_CONNECTED"}
+    ) + _frame({"error": {"code": "canceled", "message": "context canceled"}}, flags=0x02)
+    aioclient_mock.post(
+        f"{BASE}/v1sync.BackrestSyncStateService/GetPeerSyncStatesStream", content=body
+    )
+    peers = await _client(hass, None, None).async_get_peer_states()
+    assert peers == [{"peerInstanceId": "netbird-vps", "state": "CONNECTION_STATE_CONNECTED"}]
+    sent = aioclient_mock.mock_calls[0][2]
+    assert sent == _frame({"subscribe": False})
+
+
+async def test_peer_states_unsupported(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Servers without multihost sync answer 404."""
+    aioclient_mock.post(
+        f"{BASE}/v1sync.BackrestSyncStateService/GetPeerSyncStatesStream", status=404, text=""
+    )
+    with pytest.raises(BackrestUnsupportedError):
+        await _client(hass, None, None).async_get_peer_states()

@@ -41,9 +41,11 @@ from .models import (
     SYSTEM_PLAN_ID,
     BackrestConfig,
     BackrestData,
+    RemoteInstance,
     SummaryDashboard,
     build_plan_state,
     build_repo_states,
+    remote_plan_key,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,6 +79,7 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
         )
         self.client = client
         self.summary_supported: bool | None = None
+        self.multihost_supported: bool | None = None
         self.last_successful_fetch: datetime | None = None
         self.last_error: str | None = None
         self.event_stream_state: str = "disabled"
@@ -108,18 +111,31 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
         # and the raw payload is dropped right away.
         config = BackrestConfig.from_api(await self.client.async_get_config())
         summary = await self._async_fetch_summary()
+        remotes = await self._async_fetch_remotes()
+        remote_plans = [plan for remote in remotes.values() for plan in remote.plans]
         semaphore = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
 
-        async def fetch_operations(plan_id: str, last_n: int) -> list[dict[str, Any]]:
+        async def fetch_operations(
+            plan_id: str, instance: str, last_n: int
+        ) -> list[dict[str, Any]]:
             async with semaphore:
-                return await self.client.async_get_operations(plan_id, config.instance, last_n)
+                return await self.client.async_get_operations(plan_id, instance, last_n)
 
         plan_ids = list(config.plans)
         *results, system_result = await asyncio.gather(
-            *(fetch_operations(plan_id, OPERATIONS_PER_PLAN) for plan_id in plan_ids),
-            fetch_operations(SYSTEM_PLAN_ID, SYSTEM_OPERATIONS),
+            *(
+                fetch_operations(plan_id, config.instance, OPERATIONS_PER_PLAN)
+                for plan_id in plan_ids
+            ),
+            *(
+                fetch_operations(plan.id, plan.instance, OPERATIONS_PER_PLAN)
+                for plan in remote_plans
+            ),
+            fetch_operations(SYSTEM_PLAN_ID, config.instance, SYSTEM_OPERATIONS),
             return_exceptions=True,
         )
+        local_results = results[: len(plan_ids)]
+        remote_results = results[len(plan_ids) :]
         all_operations: list[dict[str, Any]] = []
         if isinstance(system_result, BackrestAuthError):
             raise system_result
@@ -132,7 +148,7 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
             )
         now = dt_util.utcnow()
         plans = {}
-        for plan_id, result in zip(plan_ids, results, strict=True):
+        for plan_id, result in zip(plan_ids, local_results, strict=True):
             if isinstance(result, BackrestNotFoundError):
                 # Plan deleted between GetConfig and GetOperations.
                 continue
@@ -149,6 +165,21 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
                 OPERATIONS_PER_PLAN,
                 now,
             )
+        for plan, result in zip(remote_plans, remote_results, strict=True):
+            if isinstance(result, BackrestAuthError):
+                raise result
+            if isinstance(result, BaseException):
+                # A remote plan only enriches the data; keep the rest working.
+                _LOGGER.debug(
+                    "Cannot fetch operations of %s/%s: %s", plan.instance, plan.id, result
+                )
+                continue
+            # Remote repos are not tracked here: their operations stay out of
+            # all_operations so local repository states are unaffected.
+            operations = [op for op in result if op.get("instanceId") == plan.instance]
+            plans[remote_plan_key(plan.instance, plan.id)] = build_plan_state(
+                plan, operations, None, OPERATIONS_PER_PLAN, now
+            )
 
         return BackrestData(
             config=config,
@@ -156,6 +187,7 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
             repos=build_repo_states(config, summary, all_operations),
             summary_available=summary is not None,
             fetched_at=now,
+            remotes=remotes,
         )
 
     async def _async_fetch_summary(self) -> SummaryDashboard | None:
@@ -176,6 +208,32 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
             return None
         self.summary_supported = True
         return SummaryDashboard.from_api(raw)
+
+    async def _async_fetch_remotes(self) -> dict[str, RemoteInstance]:
+        """Return the remote instances synced to this server (multihost)."""
+        if self.multihost_supported is False:
+            return {}
+        try:
+            raw = await self.client.async_get_peer_states()
+        except BackrestUnsupportedError:
+            _LOGGER.info(
+                "Backrest at %s has no multihost sync API (requires 1.10.0+)",
+                self.client.base_url.host,
+            )
+            self.multihost_supported = False
+            return {}
+        except BackrestAuthError:
+            raise
+        except BackrestError as err:
+            # Remote instances only enrich the data; keep the last known ones.
+            _LOGGER.debug("Remote instances unavailable: %s", err)
+            return dict(self.data.remotes) if self.data else {}
+        self.multihost_supported = True
+        remotes: dict[str, RemoteInstance] = {}
+        for item in raw:
+            if remote := RemoteInstance.from_api(item):
+                remotes[remote.instance_id] = remote
+        return remotes
 
     # Actions
 
@@ -244,6 +302,13 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="plan_not_found",
+                translation_placeholders={"target": plan_id},
+            )
+        if state.plan.is_remote:
+            # The API offers no way to start or cancel backups on a peer.
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="remote_plan_action",
                 translation_placeholders={"target": plan_id},
             )
         return state

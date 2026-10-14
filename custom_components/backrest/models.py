@@ -8,7 +8,7 @@ tokens, ...) out of Home Assistant's memory, logs and diagnostics.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 import logging
@@ -198,6 +198,13 @@ class Plan:
     repo_id: str
     schedule: Schedule
     path_count: int
+    # Instance ID of a remote (multihost client) instance, empty for local plans.
+    instance: str = ""
+
+    @property
+    def is_remote(self) -> bool:
+        """Return whether the plan belongs to a remote instance."""
+        return bool(self.instance)
 
     @classmethod
     def from_api(cls, data: dict[str, Any]) -> Plan | None:
@@ -211,6 +218,79 @@ class Plan:
             repo_id=_str(data.get("repo")),
             schedule=Schedule.from_api(data.get("schedule")),
             path_count=len(paths) if isinstance(paths, list) else 0,
+        )
+
+
+REMOTE_PLAN_SEPARATOR = "/"
+
+
+def remote_plan_key(instance: str, plan_id: str) -> str:
+    """Return the key of a remote plan in BackrestData.plans."""
+    return f"{instance}{REMOTE_PLAN_SEPARATOR}{plan_id}"
+
+
+class PeerConnection(StrEnum):
+    """Multihost connection state of a remote instance."""
+
+    UNKNOWN = "unknown"
+    PENDING = "pending"
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    RETRY_WAIT = "retry_wait"
+    ERROR_AUTH = "error_auth"
+    ERROR_PROTOCOL = "error_protocol"
+    ERROR_INTERNAL = "error_internal"
+
+
+@dataclass(frozen=True, slots=True)
+class RemoteInstance:
+    """A Backrest client instance synced to this server (multihost)."""
+
+    instance_id: str
+    key_id: str
+    connection: PeerConnection
+    status_message: str
+    last_heartbeat: datetime | None
+    plans: tuple[Plan, ...]
+
+    @property
+    def connected(self) -> bool:
+        """Return whether the instance is currently connected."""
+        return self.connection is PeerConnection.CONNECTED
+
+    @classmethod
+    def from_api(cls, data: dict[str, Any]) -> RemoteInstance | None:
+        """Parse a PeerState message.
+
+        Only plans are taken from the remote config: its repositories carry
+        plaintext passwords and are ignored.
+        """
+        instance_id = _str(data.get("peerInstanceId")).strip()
+        if not instance_id or REMOTE_PLAN_SEPARATOR in instance_id:
+            return None
+        raw_state = _str(data.get("state")).removeprefix("CONNECTION_STATE_").lower()
+        try:
+            connection = PeerConnection(raw_state)
+        except ValueError:
+            connection = PeerConnection.UNKNOWN
+        plans: dict[str, Plan] = {}
+        raw_plans = _dict(data.get("remoteConfig")).get("plans")
+        for raw in raw_plans if isinstance(raw_plans, list) else []:
+            if isinstance(raw, dict) and (plan := Plan.from_api(raw)):
+                plans[plan.id] = replace(plan, instance=instance_id)
+        # Without config permission only the plan IDs are known.
+        known = data.get("knownPlans")
+        for raw in known if isinstance(known, list) else []:
+            plan_id = _str(_dict(raw).get("id")).strip()
+            if plan_id and plan_id not in plans:
+                plans[plan_id] = Plan(plan_id, "", Schedule("unknown"), 0, instance_id)
+        return cls(
+            instance_id=instance_id,
+            key_id=_str(data.get("peerKeyid")),
+            connection=connection,
+            status_message=_truncate(_str(data.get("statusMessage"))),
+            last_heartbeat=_ms_to_datetime(data.get("lastHeartbeatMillis")),
+            plans=tuple(plans[key] for key in sorted(plans)),
         )
 
 
@@ -716,6 +796,9 @@ class BackrestData:
     summary_available: bool
     fetched_at: datetime
     plan_errors: dict[str, str] = field(default_factory=dict)
+    # Remote instances (multihost clients) keyed by instance ID. Their plans are
+    # part of `plans` under remote_plan_key(instance, plan_id).
+    remotes: dict[str, RemoteInstance] = field(default_factory=dict)
 
     @property
     def running_operations(self) -> list[Operation]:

@@ -73,9 +73,15 @@ async def async_setup_entry(
     async_setup_dynamic_entities(
         entry,
         async_add_entities,
-        lambda plan_id: [
-            BackrestPlanButton(coordinator, description, plan_id) for description in PLAN_BUTTONS
-        ],
+        lambda plan_id: (
+            []
+            # Backups of remote instances cannot be started or cancelled via the API.
+            if coordinator.data.plans[plan_id].plan.is_remote
+            else [
+                BackrestPlanButton(coordinator, description, plan_id)
+                for description in PLAN_BUTTONS
+            ]
+        ),
         lambda repo_id: [
             BackrestRepoButton(coordinator, description, repo_id) for description in REPO_BUTTONS
         ],

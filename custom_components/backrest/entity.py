@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import BackrestConfigEntry, BackrestCoordinator
-from .models import PlanState, RepoState
+from .models import PlanState, RemoteInstance, RepoState
 
 MANUFACTURER = "Backrest"
 
@@ -34,6 +34,11 @@ def plan_device_identifier(entry: BackrestConfigEntry, plan_id: str) -> tuple[st
 def repo_device_identifier(entry: BackrestConfigEntry, repo_id: str) -> tuple[str, str]:
     """Return the device identifier of a repository."""
     return (DOMAIN, f"{_instance_uid(entry)}_repo_{repo_id}")
+
+
+def remote_device_identifier(entry: BackrestConfigEntry, instance_id: str) -> tuple[str, str]:
+    """Return the device identifier of a remote (multihost client) instance."""
+    return (DOMAIN, f"{_instance_uid(entry)}_remote_{instance_id}")
 
 
 def _via_server(coordinator: BackrestCoordinator) -> DeviceInfo:
@@ -92,12 +97,18 @@ class BackrestPlanEntity(BackrestEntity):
         super().__init__(coordinator, description)
         entry = coordinator.config_entry
         self.plan_id = plan_id
+        state = coordinator.data.plans.get(plan_id) if coordinator.data else None
+        plan = state.plan if state else None
         self._attr_unique_id = f"{_instance_uid(entry)}_plan_{plan_id}_{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={plan_device_identifier(entry, plan_id)},
-            name=f"Backrest {plan_id}",
+            name=(
+                f"Backrest {plan.instance} {plan.id}"
+                if plan and plan.is_remote
+                else f"Backrest {plan_id}"
+            ),
             manufacturer=MANUFACTURER,
-            model="Backup plan",
+            model="Backup plan (remote)" if plan and plan.is_remote else "Backup plan",
             configuration_url=str(coordinator.client.base_url),
             **_via_server(coordinator),
         )
@@ -151,14 +162,51 @@ class BackrestRepoEntity(BackrestEntity):
         return super().available and self.repo_state is not None
 
 
+class BackrestRemoteEntity(BackrestEntity):
+    """Entity attached to a remote (multihost client) instance device."""
+
+    def __init__(
+        self,
+        coordinator: BackrestCoordinator,
+        description: EntityDescription,
+        instance_id: str,
+    ) -> None:
+        """Initialize the entity."""
+        super().__init__(coordinator, description)
+        entry = coordinator.config_entry
+        self.instance_id = instance_id
+        self._attr_unique_id = f"{_instance_uid(entry)}_remote_{instance_id}_{description.key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={remote_device_identifier(entry, instance_id)},
+            name=f"Backrest {instance_id}",
+            manufacturer=MANUFACTURER,
+            model="Remote Backrest instance",
+            configuration_url=str(coordinator.client.base_url),
+            **_via_server(coordinator),
+        )
+
+    @property
+    def remote(self) -> RemoteInstance | None:
+        """Return the current state of the remote instance."""
+        if self.coordinator.data is None:
+            return None
+        return self.coordinator.data.remotes.get(self.instance_id)
+
+    @property
+    def available(self) -> bool:
+        """Return whether the instance is still known and data is current."""
+        return super().available and self.remote is not None
+
+
 @callback
 def async_setup_dynamic_entities(
     entry: BackrestConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
     plan_entities: Callable[[str], Iterable[Entity]],
     repo_entities: Callable[[str], Iterable[Entity]] | None = None,
+    remote_entities: Callable[[str], Iterable[Entity]] | None = None,
 ) -> None:
-    """Add entities for plans and repositories, including ones created later.
+    """Add entities for plans, repositories and remote instances, including later ones.
 
     Entities of a plan are created once when the plan first appears. New
     backup runs only update existing entities. Removed plans are cleaned up
@@ -167,6 +215,7 @@ def async_setup_dynamic_entities(
     coordinator = entry.runtime_data
     known_plans: set[str] = set()
     known_repos: set[str] = set()
+    known_remotes: set[str] = set()
 
     @callback
     def _async_check() -> None:
@@ -183,6 +232,11 @@ def async_setup_dynamic_entities(
             for repo_id in sorted(data.repos.keys() - known_repos):
                 known_repos.add(repo_id)
                 new_entities.extend(repo_entities(repo_id))
+        if remote_entities is not None:
+            known_remotes.intersection_update(data.remotes)
+            for instance_id in sorted(data.remotes.keys() - known_remotes):
+                known_remotes.add(instance_id)
+                new_entities.extend(remote_entities(instance_id))
         if new_entities:
             async_add_entities(new_entities)
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2026-10-14
+
+- Multihost: when Backrest is a multihost server, its client instances (for example VPS
+  backed up via Backrest) appear as devices with *Connected*, *Last contact* and
+  *Connection* entities, and their plans get the usual plan sensors (last backup, next
+  backup, progress, failed, overdue). Remote plans are read-only: no start/cancel buttons.
+- Failed or overdue remote plans turn on the server's *Problem* binary sensor
+- Diagnostics list remote instances without key IDs or remote configs
+
 ## 0.2.1 - 2026-10-13
 
 - Fix plan and repository entities disappearing after renaming one of their entities on

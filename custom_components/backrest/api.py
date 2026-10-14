@@ -25,6 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 BACKREST_SERVICE = "v1.Backrest"
 AUTH_SERVICE = "v1.Authentication"
+SYNC_STATE_SERVICE = "v1sync.BackrestSyncStateService"
 
 _CONNECT_HEADERS = {
     "Content-Type": "application/json",
@@ -316,6 +317,34 @@ class BackrestClient:
         """Request cancellation of an operation. Not guaranteed to succeed."""
         await self._call("Cancel", {"operationId": str(operation_id)}, idempotent=False)
 
+    async def async_get_peer_states(self) -> list[dict[str, Any]]:
+        """Return the multihost peers (remote Backrest instances) of this server.
+
+        Each entry includes the peer's remote config, which can contain
+        repository passwords. Callers must keep only the fields they need.
+        Raises BackrestUnsupportedError on servers without multihost sync.
+        """
+        for attempt in range(2):
+            peers: list[dict[str, Any]] = []
+            try:
+                async for message in self._stream(
+                    "GetPeerSyncStatesStream", {"subscribe": False}, service=SYNC_STATE_SERVICE
+                ):
+                    # Collected one by one: the stream ends with an exception
+                    # ("canceled") that must not discard the received peers.
+                    peers.append(message)  # noqa: PERF401
+            except BackrestAuthError:
+                if attempt or not self.has_credentials:
+                    raise
+                await self.async_login()
+                continue
+            except BackrestApiError as err:
+                # Without a subscription the server ends the stream by cancelling it.
+                if err.code != "canceled":
+                    raise
+            return peers
+        return []
+
     async def async_operation_events(self) -> AsyncIterator[dict[str, Any]]:
         """Yield operation events from the GetOperationEvents stream.
 
@@ -333,8 +362,10 @@ class BackrestClient:
                 continue
             return
 
-    async def _stream(self, method: str, payload: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
-        url = self._base_url / BACKREST_SERVICE / method
+    async def _stream(
+        self, method: str, payload: dict[str, Any], *, service: str = BACKREST_SERVICE
+    ) -> AsyncIterator[dict[str, Any]]:
+        url = self._base_url / service / method
         body = json.dumps(payload).encode()
         envelope = struct.pack(">BI", 0, len(body)) + body
         headers = dict(_STREAM_HEADERS)

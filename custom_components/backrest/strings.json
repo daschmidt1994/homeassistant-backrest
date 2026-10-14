@@ -194,6 +194,22 @@
       },
       "last_prune": {
         "name": "Last prune"
+      },
+      "last_contact": {
+        "name": "Last contact"
+      },
+      "connection": {
+        "name": "Connection",
+        "state": {
+          "unknown": "Unknown",
+          "pending": "Pending",
+          "connected": "Connected",
+          "disconnected": "Disconnected",
+          "retry_wait": "Waiting to retry",
+          "error_auth": "Authentication error",
+          "error_protocol": "Protocol error",
+          "error_internal": "Internal error"
+        }
       }
     },
     "binary_sensor": {
@@ -223,6 +239,9 @@
           "on": "Yes",
           "off": "No"
         }
+      },
+      "remote_connected": {
+        "name": "Connected"
       }
     },
     "button": {
@@ -276,6 +295,9 @@
     },
     "entry_not_loaded": {
       "message": "Backrest instance {entry} is not loaded."
+    },
+    "remote_plan_action": {
+      "message": "{target} belongs to a remote Backrest instance. Its backups can only be started or cancelled on that instance."
     }
   },
   "services": {

@@ -156,6 +156,28 @@ appends `_2`.
 | Check repository | `button.backrest_repository_offsite_check_repository` | Disabled by default |
 | Prune repository | `button.backrest_repository_offsite_prune_repository` | Disabled by default |
 
+### Remote instance (`Backrest netbird-vps`)
+
+When the configured Backrest is a **multihost server** (Backrest ≥ 1.10, Settings →
+Multihost), every connected client instance gets its own device. Its plans appear as
+plan devices named `Backrest <instance> <plan>`, for example `Backrest netbird-vps system`,
+with the same entities as local plans except:
+
+- no *Start backup* / *Cancel backup* buttons: Backrest offers no API to run a backup on a
+  peer, start it on the client instead
+- no 30-day statistics: the server's summary dashboard only covers its own plans
+
+The client must grant the server the *Read operations* permission (for backup results)
+and *Read config* or *Read/write config* (for schedules; without it the next backup and
+overdue detection are unknown). Remote plans count towards the server sensors such as
+*Problem* and *Backup plans*; their IDs there are `<instance>/<plan>`.
+
+| Entity | Example entity ID | Notes |
+| --- | --- | --- |
+| Connected | `binary_sensor.backrest_netbird_vps_connected` | Multihost connection to the server |
+| Last contact | `sensor.backrest_netbird_vps_last_contact` | Last heartbeat; Backrest sends one every 10 minutes by default |
+| Connection | `sensor.backrest_netbird_vps_connection` | Diagnostic: connected, disconnected, retry_wait, error_auth, ... |
+
 ### Actions
 
 | Action | Fields | Description |
@@ -341,8 +363,8 @@ and hook settings are never stored by the integration in the first place.
 - **Event stream behind proxies:** proxies that buffer responses delay or break the event
   stream. Updates then arrive with the polling interval; disable *Real-time updates* if
   your proxy logs errors.
-- **Multihost sync:** only operations of the local instance are evaluated; plans of
-  synced peer instances are not shown.
+- **Multihost:** plans of client instances are read-only (see *Remote instance*), and
+  repositories of client instances are not shown.
 - Authentication uses Backrest's username/password login (JWT). Backrest offers no API keys.
 - Backrest returns repository passwords in `GetConfig` to every authenticated client. The
   integration discards them immediately, but the Backrest user you configure can read them.
@@ -359,6 +381,7 @@ All calls are Connect RPC requests (`POST /<service>/<method>`, JSON body) as de
 | `v1.Backrest/GetOperations` | Recent operations per plan |
 | `v1.Backrest/GetSummaryDashboard` | 30-day statistics (Backrest ≥ 1.6) |
 | `v1.Backrest/GetOperationEvents` | Server stream that triggers immediate refreshes |
+| `v1sync.BackrestSyncStateService/GetPeerSyncStatesStream` | Remote instances and their plans (multihost server); the remote configs it returns contain repository passwords and are reduced to plan schedules right away |
 | `v1.Backrest/Backup` | Start backup button / action |
 | `v1.Backrest/Cancel` | Cancel backup button / action |
 | `v1.Backrest/DoRepoTask` | Check / prune repository buttons |

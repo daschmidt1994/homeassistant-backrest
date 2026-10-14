@@ -20,6 +20,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .coordinator import BackrestConfigEntry
 from .entity import (
     BackrestPlanEntity,
+    BackrestRemoteEntity,
     BackrestRepoEntity,
     BackrestServerEntity,
     async_setup_dynamic_entities,
@@ -31,7 +32,9 @@ from .models import (
     BackrestData,
     Operation,
     OperationStatus,
+    PeerConnection,
     PlanState,
+    RemoteInstance,
     RepoState,
 )
 
@@ -379,6 +382,31 @@ REPO_SENSORS: tuple[BackrestRepoSensorDescription, ...] = (
 )
 
 
+@dataclass(frozen=True, kw_only=True)
+class BackrestRemoteSensorDescription(SensorEntityDescription):
+    """Describes a sensor of a remote instance."""
+
+    value_fn: Callable[[RemoteInstance], StateValue]
+
+
+REMOTE_SENSORS: tuple[BackrestRemoteSensorDescription, ...] = (
+    BackrestRemoteSensorDescription(
+        key="last_contact",
+        translation_key="last_contact",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda remote: remote.last_heartbeat,
+    ),
+    BackrestRemoteSensorDescription(
+        key="connection",
+        translation_key="connection",
+        device_class=SensorDeviceClass.ENUM,
+        options=[state.value for state in PeerConnection],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda remote: remote.connection.value,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: BackrestConfigEntry,
@@ -391,10 +419,12 @@ async def async_setup_entry(
     )
 
     def plan_entities(plan_id: str) -> list[BackrestPlanSensor]:
+        # The summary dashboard only covers local plans.
+        remote = coordinator.data.plans[plan_id].plan.is_remote
         return [
             BackrestPlanSensor(coordinator, description, plan_id)
             for description in PLAN_SENSORS
-            if not description.requires_summary or coordinator.summary_supported
+            if not description.requires_summary or (coordinator.summary_supported and not remote)
         ]
 
     def repo_entities(repo_id: str) -> list[BackrestRepoSensor]:
@@ -404,7 +434,15 @@ async def async_setup_entry(
             if not description.requires_summary or coordinator.summary_supported
         ]
 
-    async_setup_dynamic_entities(entry, async_add_entities, plan_entities, repo_entities)
+    def remote_entities(instance_id: str) -> list[BackrestRemoteSensor]:
+        return [
+            BackrestRemoteSensor(coordinator, description, instance_id)
+            for description in REMOTE_SENSORS
+        ]
+
+    async_setup_dynamic_entities(
+        entry, async_add_entities, plan_entities, repo_entities, remote_entities
+    )
 
 
 class BackrestServerSensor(BackrestServerEntity, SensorEntity):
@@ -461,3 +499,16 @@ class BackrestRepoSensor(BackrestRepoEntity, SensorEntity):
         if (state := self.repo_state) is None:
             return None
         return self.entity_description.attributes_fn(state)
+
+
+class BackrestRemoteSensor(BackrestRemoteEntity, SensorEntity):
+    """Sensor of a remote (multihost client) instance."""
+
+    entity_description: BackrestRemoteSensorDescription
+
+    @property
+    def native_value(self) -> StateValue:
+        """Return the state."""
+        if (remote := self.remote) is None:
+            return None
+        return self.entity_description.value_fn(remote)

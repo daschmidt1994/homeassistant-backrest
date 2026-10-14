@@ -70,6 +70,9 @@ class FakeBackrest:
         self.events_failures = 0
         self.events_connects = 0
         self.get_config_calls = 0
+        self.peers: dict[str, dict[str, Any]] = {}
+        self.multihost_unsupported = False
+        self.peer_states_error: Exception | None = None
         self._next_id = 100
         self.add_repo("local-repo")
 
@@ -165,6 +168,90 @@ class FakeBackrest:
             }
         )
         return op_id
+
+    def add_peer(
+        self,
+        instance: str,
+        plans: tuple[str, ...] = ("system",),
+        state: str = "CONNECTION_STATE_CONNECTED",
+        heartbeat: datetime | None = None,
+        with_config: bool = True,
+    ) -> None:
+        """Add a remote (multihost client) instance with its plans."""
+        self.peers[instance] = {
+            "plans": list(plans),
+            "state": state,
+            "heartbeat": heartbeat,
+            "with_config": with_config,
+            "operations": {plan_id: [] for plan_id in plans},
+        }
+
+    def add_peer_backup(
+        self,
+        instance: str,
+        plan_id: str,
+        status: str,
+        start: datetime,
+        end: datetime | None = None,
+        percent_done: float | None = None,
+    ) -> int:
+        """Add a backup operation synced from a remote instance."""
+        self._next_id += 1
+        backup: dict[str, Any] = {}
+        if percent_done is not None:
+            backup["lastStatus"] = {"status": {"percentDone": percent_done}}
+        operation = {
+            "id": str(self._next_id),
+            "repoId": f"{instance}-repo",
+            "planId": plan_id,
+            "instanceId": instance,
+            "originalInstanceKeyid": f"ed25519.{instance}",
+            "status": status,
+            "unixTimeStartMs": _ms(start),
+            "operationBackup": backup,
+        }
+        if end is not None:
+            operation["unixTimeEndMs"] = _ms(end)
+        self.peers[instance]["operations"][plan_id].append(operation)
+        return self._next_id
+
+    def peer_states(self) -> list[dict[str, Any]]:
+        """Return GetPeerSyncStatesStream messages, shaped like Backrest 1.14."""
+        states = []
+        for instance, peer in self.peers.items():
+            state: dict[str, Any] = {
+                "peerInstanceId": instance,
+                "peerKeyid": f"ed25519.{instance}",
+                "state": peer["state"],
+                "statusMessage": peer["state"].removeprefix("CONNECTION_STATE_").lower(),
+                "knownPlans": [{"id": plan_id} for plan_id in peer["plans"]],
+                "knownRepos": [{"id": f"{instance}-repo", "guid": f"guid-{instance}"}],
+            }
+            if peer["heartbeat"] is not None:
+                state["lastHeartbeatMillis"] = _ms(peer["heartbeat"])
+            if peer["with_config"]:
+                state["remoteConfig"] = {
+                    "modno": 3,
+                    "version": 6,
+                    "repos": [
+                        {
+                            "id": f"{instance}-repo",
+                            "uri": f"rest:http://user:{REPO_PASSWORD}@backup:8100/{instance}/",
+                            "password": REPO_PASSWORD,
+                        }
+                    ],
+                    "plans": [
+                        {
+                            "id": plan_id,
+                            "repo": f"{instance}-repo",
+                            "paths": ["/opt", "/etc"],
+                            "schedule": {"cron": "45 3 * * *", "clock": "CLOCK_LOCAL"},
+                        }
+                        for plan_id in peer["plans"]
+                    ],
+                }
+            states.append(state)
+        return states
 
     def add_system_operation(
         self,
@@ -329,10 +416,21 @@ class FakeClient:
         self, plan_id: str, instance_id: str | None, last_n: int
     ) -> list[dict[str, Any]]:
         server = self._check()
+        if instance_id in server.peers:
+            operations = server.peers[instance_id]["operations"].get(plan_id, [])
+            return [dict(op) for op in operations[-last_n:]]
         if plan_id not in server.plans and plan_id != "_system_":
             raise BackrestNotFoundError("not_found", "plan not found")
         operations = server.operations.get(plan_id, [])
         return [dict(op) for op in operations[-last_n:]]
+
+    async def async_get_peer_states(self) -> list[dict[str, Any]]:
+        server = self._check()
+        if server.multihost_unsupported:
+            raise BackrestUnsupportedError("unimplemented", "")
+        if server.peer_states_error is not None:
+            raise server.peer_states_error
+        return server.peer_states()
 
     async def async_backup(self, plan_id: str) -> None:
         server = self._check()

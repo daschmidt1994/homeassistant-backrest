@@ -15,7 +15,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import BackrestConfigEntry
-from .entity import BackrestPlanEntity, BackrestServerEntity, async_setup_dynamic_entities
+from .entity import (
+    BackrestPlanEntity,
+    BackrestRemoteEntity,
+    BackrestServerEntity,
+    async_setup_dynamic_entities,
+)
 from .models import BackrestData, PlanState
 
 PARALLEL_UPDATES = 0
@@ -122,6 +127,17 @@ async def async_setup_entry(
             BackrestPlanBinarySensor(coordinator, description, plan_id)
             for description in PLAN_BINARY_SENSORS
         ],
+        remote_entities=lambda instance_id: [
+            BackrestRemoteConnectedBinarySensor(
+                coordinator,
+                BinarySensorEntityDescription(
+                    key="connected",
+                    translation_key="remote_connected",
+                    device_class=BinarySensorDeviceClass.CONNECTIVITY,
+                ),
+                instance_id,
+            )
+        ],
     )
 
 
@@ -203,3 +219,14 @@ class BackrestPlanBinarySensor(BackrestPlanEntity, BinarySensorEntity):
         if (state := self.plan_state) is None:
             return None
         return self.entity_description.attributes_fn(state)
+
+
+class BackrestRemoteConnectedBinarySensor(BackrestRemoteEntity, BinarySensorEntity):
+    """Whether a remote instance is connected to this server."""
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return whether the remote instance is connected."""
+        if (remote := self.remote) is None:
+            return None
+        return remote.connected
