@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 - 2026-10-14
+
+- Fix remote instances missing at random (and their devices flapping) when a Backrest
+  server has more than one: Backrest drops queued peer states when the peer stream is
+  requested without subscription. The integration now subscribes and reads until every
+  configured peer has arrived, and skips the request entirely without peers.
+
 ## 0.3.0 - 2026-10-14
 
 - Multihost: when Backrest is a multihost server, its client instances (for example VPS

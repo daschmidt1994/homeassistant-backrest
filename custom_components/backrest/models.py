@@ -319,6 +319,8 @@ class BackrestConfig:
     plans: dict[str, Plan]
     repos: dict[str, Repo]
     auth_enabled: bool
+    # Number of multihost peers (authorized clients and known hosts).
+    peer_count: int = 0
 
     @classmethod
     def from_api(cls, data: dict[str, Any]) -> BackrestConfig:
@@ -333,7 +335,14 @@ class BackrestConfig:
         for raw in raw_repos if isinstance(raw_repos, list) else []:
             if isinstance(raw, dict) and (repo := Repo.from_api(raw)):
                 repos[repo.id] = repo
-        identity = _dict(_dict(data.get("sync")).get("identity"))
+        sync = _dict(data.get("sync"))
+        identity = _dict(sync.get("identity"))
+        peer_keys: set[str] = set()
+        for field_name in ("authorizedClients", "knownHosts"):
+            peers = sync.get(field_name)
+            for peer in peers if isinstance(peers, list) else []:
+                if key := _str(_dict(peer).get("keyId")) or _str(_dict(peer).get("instanceId")):
+                    peer_keys.add(key)
         auth = _dict(data.get("auth"))
         return cls(
             instance=_str(data.get("instance")).strip(),
@@ -341,6 +350,7 @@ class BackrestConfig:
             plans=plans,
             repos=repos,
             auth_enabled=bool(auth) and auth.get("disabled") is not True,
+            peer_count=len(peer_keys),
         )
 
     @property

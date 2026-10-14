@@ -19,7 +19,7 @@ from typing import Any
 import aiohttp
 from yarl import URL
 
-from .const import EVENT_STREAM_READ_TIMEOUT, REQUEST_TIMEOUT
+from .const import EVENT_STREAM_READ_TIMEOUT, PEER_STATES_IDLE_TIMEOUT, REQUEST_TIMEOUT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -317,32 +317,53 @@ class BackrestClient:
         """Request cancellation of an operation. Not guaranteed to succeed."""
         await self._call("Cancel", {"operationId": str(operation_id)}, idempotent=False)
 
-    async def async_get_peer_states(self) -> list[dict[str, Any]]:
+    async def async_get_peer_states(
+        self, expected: int, idle_timeout: float = PEER_STATES_IDLE_TIMEOUT
+    ) -> list[dict[str, Any]]:
         """Return the multihost peers (remote Backrest instances) of this server.
+
+        Backrest ends a stream requested without subscription by cancelling it
+        while the peer states may still be queued, so peers go missing at
+        random. The stream is therefore subscribed and read until all
+        `expected` peers arrived or it stayed quiet for `idle_timeout`.
 
         Each entry includes the peer's remote config, which can contain
         repository passwords. Callers must keep only the fields they need.
         Raises BackrestUnsupportedError on servers without multihost sync.
         """
+        if expected <= 0:
+            return []
         for attempt in range(2):
-            peers: list[dict[str, Any]] = []
+            peers: dict[str, dict[str, Any]] = {}
+            stream = self._stream(
+                "GetPeerSyncStatesStream", {"subscribe": True}, service=SYNC_STATE_SERVICE
+            )
             try:
-                async for message in self._stream(
-                    "GetPeerSyncStatesStream", {"subscribe": False}, service=SYNC_STATE_SERVICE
-                ):
-                    # Collected one by one: the stream ends with an exception
-                    # ("canceled") that must not discard the received peers.
-                    peers.append(message)  # noqa: PERF401
+                while len(peers) < expected:
+                    try:
+                        message = await asyncio.wait_for(
+                            anext(stream), idle_timeout if peers else REQUEST_TIMEOUT
+                        )
+                    except StopAsyncIteration:
+                        break
+                    except TimeoutError:
+                        if not peers:
+                            raise BackrestTimeoutError("No peer states received") from None
+                        break
+                    # A peer can be sent again when its state changes; keep the newest.
+                    key = _peer_key(message) or str(len(peers))
+                    peers[key] = message
             except BackrestAuthError:
                 if attempt or not self.has_credentials:
                     raise
                 await self.async_login()
                 continue
             except BackrestApiError as err:
-                # Without a subscription the server ends the stream by cancelling it.
                 if err.code != "canceled":
                     raise
-            return peers
+            finally:
+                await stream.aclose()
+            return list(peers.values())
         return []
 
     async def async_operation_events(self) -> AsyncIterator[dict[str, Any]]:
@@ -409,6 +430,10 @@ class BackrestClient:
             raise BackrestTimeoutError("Event stream timed out") from err
         except aiohttp.ClientError as err:
             raise BackrestConnectionError(f"Event stream failed: {type(err).__name__}") from err
+
+
+def _peer_key(message: dict[str, Any]) -> str:
+    return str(message.get("peerKeyid") or message.get("peerInstanceId") or "")
 
 
 def parse_stream_frame(frame: bytes) -> dict[str, Any]:

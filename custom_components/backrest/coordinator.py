@@ -111,7 +111,7 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
         # and the raw payload is dropped right away.
         config = BackrestConfig.from_api(await self.client.async_get_config())
         summary = await self._async_fetch_summary()
-        remotes = await self._async_fetch_remotes()
+        remotes = await self._async_fetch_remotes(config.peer_count)
         remote_plans = [plan for remote in remotes.values() for plan in remote.plans]
         semaphore = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
 
@@ -209,12 +209,12 @@ class BackrestCoordinator(DataUpdateCoordinator[BackrestData]):
         self.summary_supported = True
         return SummaryDashboard.from_api(raw)
 
-    async def _async_fetch_remotes(self) -> dict[str, RemoteInstance]:
+    async def _async_fetch_remotes(self, peer_count: int) -> dict[str, RemoteInstance]:
         """Return the remote instances synced to this server (multihost)."""
-        if self.multihost_supported is False:
+        if self.multihost_supported is False or peer_count == 0:
             return {}
         try:
-            raw = await self.client.async_get_peer_states()
+            raw = await self.client.async_get_peer_states(peer_count)
         except BackrestUnsupportedError:
             _LOGGER.info(
                 "Backrest at %s has no multihost sync API (requires 1.10.0+)",

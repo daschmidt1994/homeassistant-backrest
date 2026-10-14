@@ -256,17 +256,45 @@ async def test_operation_events_truncated(
 
 
 async def test_peer_states_stream(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
-    """Peer states are collected; the server ends the stream by cancelling it."""
-    body = _frame(
-        {"peerInstanceId": "netbird-vps", "state": "CONNECTION_STATE_CONNECTED"}
-    ) + _frame({"error": {"code": "canceled", "message": "context canceled"}}, flags=0x02)
+    """The stream is subscribed and read until every expected peer arrived."""
+    body = (
+        _frame({"peerKeyid": "k1", "peerInstanceId": "netbird-vps", "state": "A"})
+        + _frame({"peerKeyid": "k1", "peerInstanceId": "netbird-vps", "state": "B"})
+        + _frame({"peerKeyid": "k2", "peerInstanceId": "pangolin-vps"})
+        + _frame({"peerKeyid": "k3", "peerInstanceId": "not-read"})
+    )
     aioclient_mock.post(
         f"{BASE}/v1sync.BackrestSyncStateService/GetPeerSyncStatesStream", content=body
     )
-    peers = await _client(hass, None, None).async_get_peer_states()
-    assert peers == [{"peerInstanceId": "netbird-vps", "state": "CONNECTION_STATE_CONNECTED"}]
+    peers = await _client(hass, None, None).async_get_peer_states(2)
+    assert [(p["peerInstanceId"], p.get("state")) for p in peers] == [
+        ("netbird-vps", "B"),
+        ("pangolin-vps", None),
+    ]
     sent = aioclient_mock.mock_calls[0][2]
-    assert sent == _frame({"subscribe": False})
+    assert sent == _frame({"subscribe": True})
+
+
+async def test_peer_states_without_peers(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Without configured peers the stream is not opened at all."""
+    assert await _client(hass, None, None).async_get_peer_states(0) == []
+    assert aioclient_mock.call_count == 0
+
+
+async def test_peer_states_stream_ends_early(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A stream that ends before all peers arrived returns what was received."""
+    body = _frame({"peerKeyid": "k1", "peerInstanceId": "netbird-vps"}) + _frame(
+        {"error": {"code": "canceled", "message": "context canceled"}}, flags=0x02
+    )
+    aioclient_mock.post(
+        f"{BASE}/v1sync.BackrestSyncStateService/GetPeerSyncStatesStream", content=body
+    )
+    peers = await _client(hass, None, None).async_get_peer_states(2)
+    assert [p["peerInstanceId"] for p in peers] == ["netbird-vps"]
 
 
 async def test_peer_states_unsupported(
@@ -277,4 +305,4 @@ async def test_peer_states_unsupported(
         f"{BASE}/v1sync.BackrestSyncStateService/GetPeerSyncStatesStream", status=404, text=""
     )
     with pytest.raises(BackrestUnsupportedError):
-        await _client(hass, None, None).async_get_peer_states()
+        await _client(hass, None, None).async_get_peer_states(1)

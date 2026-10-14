@@ -32,6 +32,9 @@ REQUEST_TIMEOUT: Final = 30
 START_CONFIRM_TIMEOUT: Final = 10
 # Backrest sends a keep-alive on the event stream every 60 seconds.
 EVENT_STREAM_READ_TIMEOUT: Final = 150
+# Peer states are read from a subscribed stream (see api.async_get_peer_states):
+# stop once the stream has been quiet this long after the initial burst.
+PEER_STATES_IDLE_TIMEOUT: Final = 1.0
 EVENT_STREAM_MIN_BACKOFF: Final = 5
 EVENT_STREAM_MAX_BACKOFF: Final = 300
 

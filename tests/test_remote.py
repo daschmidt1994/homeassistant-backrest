@@ -151,14 +151,35 @@ async def test_multihost_unsupported(
     """Servers without multihost sync work as before and are not asked again."""
     backrest.multihost_unsupported = True
     entry = await _setup(hass, config_entry)
+    assert entry.runtime_data.multihost_supported is None  # no peers: never asked
+    backrest.add_peer("netbird-vps")
+    await _refresh(hass, entry)
     assert entry.runtime_data.multihost_supported is False
     assert entry.runtime_data.data.remotes == {}
     assert _state(hass, "sensor.backrest_test_instance_backup_plans") == "2"
 
     backrest.multihost_unsupported = False
-    backrest.add_peer("netbird-vps")
     await _refresh(hass, entry)
     assert entry.runtime_data.data.remotes == {}
+    assert backrest.peer_state_requests == [1]
+
+
+async def test_no_peers_no_stream(
+    hass: HomeAssistant, backrest: FakeBackrest, config_entry: MockConfigEntry
+) -> None:
+    """Servers without multihost peers are not asked for peer states."""
+    await _setup(hass, config_entry)
+    assert backrest.peer_state_requests == []
+
+
+async def test_peer_count_from_config(
+    hass: HomeAssistant, peer: FakeBackrest, config_entry: MockConfigEntry
+) -> None:
+    """The number of configured peers is passed on, so all of them are awaited."""
+    peer.add_peer("pangolin-vps")
+    await _setup(hass, config_entry)
+    assert peer.peer_state_requests[-1] == 2
+    assert _state(hass, "binary_sensor.backrest_pangolin_vps_connected") == STATE_ON
 
 
 async def test_peer_error_keeps_last_state(

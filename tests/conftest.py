@@ -73,6 +73,7 @@ class FakeBackrest:
         self.peers: dict[str, dict[str, Any]] = {}
         self.multihost_unsupported = False
         self.peer_states_error: Exception | None = None
+        self.peer_state_requests: list[int] = []
         self._next_id = 100
         self.add_repo("local-repo")
 
@@ -307,7 +308,13 @@ class FakeBackrest:
                 "disabled": not self.auth_enabled,
                 "users": [{"name": USERNAME, "passwordBcrypt": "JDJhJDEwJHNlY3JldA=="}],
             },
-            "sync": {"identity": {"keyId": self.key_id}},
+            "sync": {
+                "identity": {"keyId": self.key_id},
+                "authorizedClients": [
+                    {"instanceId": instance, "keyId": f"ed25519.{instance}"}
+                    for instance in self.peers
+                ],
+            },
         }
 
     def summary(self) -> dict[str, Any]:
@@ -424,8 +431,9 @@ class FakeClient:
         operations = server.operations.get(plan_id, [])
         return [dict(op) for op in operations[-last_n:]]
 
-    async def async_get_peer_states(self) -> list[dict[str, Any]]:
+    async def async_get_peer_states(self, expected: int) -> list[dict[str, Any]]:
         server = self._check()
+        server.peer_state_requests.append(expected)
         if server.multihost_unsupported:
             raise BackrestUnsupportedError("unimplemented", "")
         if server.peer_states_error is not None:
