@@ -662,7 +662,11 @@ def build_plan_state(
     """Derive the state of a plan from its most recent operations."""
     operations = sorted(
         (op for raw in raw_operations if (op := BackupOperation.from_api(raw)) is not None),
-        key=lambda op: op.id,
+        # Order by start time, not by ID: operations synced from a multihost
+        # peer get a new, higher ID whenever the peer updates them (e.g. when
+        # retention forgets an old snapshot), so the newest ID can belong to a
+        # week-old backup.
+        key=lambda op: (op.start or datetime.min.replace(tzinfo=UTC), op.id),
     )
     # GetOperations returned fewer entries than requested: the complete history
     # of the plan is known.
