@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2 - 2026-10-31
+
+- Fix remote (multihost) plans flipping to "overdue" once a day: Backrest re-syncs a
+  peer operation with a new, higher ID whenever it changes (for example when retention
+  forgets a week-old snapshot), and the integration took the operation with the highest
+  ID as the latest backup. Plan operations are now ordered by start time.
+
 ## 0.3.1 - 2026-10-14
 
 - Fix remote instances missing at random (and their devices flapping) when a Backrest

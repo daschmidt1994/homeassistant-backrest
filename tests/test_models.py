@@ -209,6 +209,24 @@ def test_overdue() -> None:
     assert build_plan_state(_plan({"disabled": True}), late, None, 50, NOW).overdue is False
 
 
+def test_last_success_ignores_operation_id_order() -> None:
+    """A re-synced old peer operation with a higher ID is not the newest backup.
+
+    Multihost peers resend an operation with a new ID when it changes, e.g.
+    when retention forgets its snapshot a week later.
+    """
+    plan = _plan({"maxFrequencyDays": 1})
+    recent = NOW - timedelta(hours=18)
+    week_old = NOW - timedelta(days=7, hours=18)
+    operations = [
+        _op(10, "STATUS_SUCCESS", recent, recent + timedelta(seconds=9)),
+        _op(20, "STATUS_SUCCESS", week_old, week_old + timedelta(seconds=9)),
+    ]
+    state = build_plan_state(plan, operations, None, 50, NOW)
+    assert state.last_success_time == recent + timedelta(seconds=9)
+    assert state.overdue is False
+
+
 def test_overdue_unknown_without_history() -> None:
     """Without a known success in a truncated history overdue is unknown."""
     plan = _plan()
